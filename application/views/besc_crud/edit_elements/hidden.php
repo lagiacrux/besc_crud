@@ -1,0 +1,1 @@
+		<div			class="bc_column bc_hiddencolumn <? if(($num_row) %2 == 0): ?>erow<?endif;?>">			<div class="bc_column_input bc_col_hidden">				<input type="hidden" name="col_<?= $db_name?>" value="<? if(isset($value)) echo $value;?>">			</div>		</div>

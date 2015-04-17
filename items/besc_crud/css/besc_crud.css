@@ -1,0 +1,53 @@
+
+
+.bc_title{	position: relative;	font-size: 20px;	color: #000000;	margin-top: 10px;	margin-bottom: 5px;	font-family: 'open_sansbold';	text-transform: uppercase;}.bc_message_container{	position: fixed;	width: 100%;	top: 0px;	left: 0px;}	.bc_message	{		position: relative;		line-height: 0px;		width: 100%;		text-align: center;		font-family: 'open_sansregular';		font-size: 15px;		color: #000000;	}			.bc_message_error		{			background-color: #fc0707;		}				.bc_message_success		{			background-color: #00de36;		}.bc_table_actions{	position: relative;	background-color: #ddd;	margin-top: 5px;	margin-bottom: 5px;	line-height: 25px;
+	width: 100%;}	.bc_table_actions a	{		text-decoration: none;		color: inherit;	}	.bc_table_action	{		position: relative;		cursor: pointer;		margin-left: 10px;		margin-right: 10px;		font-family: 'open_sansregular';		font-size: 13px;	}		.bc_table_action_icon		{			position: relative;			vertical-align: sub;			max-width: 16px;			max-height: 16px;		}.bc_table{	position: relative;	margin-top: 5px;	margin-bottom: 5px;	border-collapse: separate;	border-width: 0px;	font-size: 12px;	border-bottom: solid 1px #ddd;	border-right: solid 1px #ddd;
+	width: 100%;}	.bc_erow	{		background-color: #f7f7f7;		border-bottom: solid 1px #f7f7f7;	}	.bc_table th	{		background-image: url('../img/thbg.gif');		background-repeat: repeat-x;		background-position: bottom;		background-color: #fafafa;		line-height: 25px;		vertical-align: bottom;		font-size: 13px;		padding-left: 4px;		text-align: left;		font-family: 'open_sansregular';	}		.bc_table td	{		border-left: solid 1px #ddd;		border-right: solid 1px #fff;		padding: 4px;		font-family: 'open_sansregular';		font-size: 12px;	}
+	
+		.bc_m_n_element
+		{
+			position: relative;
+			padding: 2px 4px;
+			border-radius: 7px;
+			background-color: #ddd;
+			color: #000000;
+			margin-right: 4px;
+		}		.bc_row_action	{		max-height: 20px;		cursor: pointer;		vertical-align: sub;	}.bc_delete_dialog{	position: fixed;	z-index: 20000;	overflow: hidden;	top: 35%;	border: solid 2px #ddd;	border-radius: 15px;	background-color: #f7f7f7;		width: 500px;	margin-left: -250px;	left: 50%;	height: 80px;		font-size: 20px;	font-family: 'open_sansregular';	text-align: center;	padding: 20px 0px;	display: none;}	.bc_delete_button	{		position: absolute;		width: 180px;		top: 65px;		line-height: 35px;		background-color: #ffffff;		font-size: 16px;		text-align: center;		border-radius: 10px;		cursor: pointer;	}			.bc_delete_button:hover		{			border: solid 1px #ddd;		}	.bc_delete_ok	{		left: 50px;	}		.bc_delete_cancel	{		left: 270px;	}.bc_fade{	position: fixed;	width: 100%;	height: 100%;	top: 0px;	left: 0px;	z-index: 19999;	display: none;	background-color: rgba(247,247,247,0.4);}
+.bc_edit_table{	position: relative;	border: solid 1px #ddd;	border-radius: 15px;	overflow: hidden;	font-family: 'open_sansregular';}	.bc_edit_table .erow	{		background-color: #f7f7f7;	}	.bc_column	{		border-bottom: solid 1px #ddd;		padding: 15px;	}			.bc_column_header	{		margin-top: 0px;		font-size: 14px;		font-weight: bold;		margin-bottom: 5px;	}		.bc_column_info	{		margin-top: -2px;		margin-bottom: 5px;		font-size: 12px;	}			.bc_column:last-child	{		border-bottom: 0px;	}		.bc_column_input input[type="text"]	{		width: 100%;		font-size: 14px;		border: solid 2px #ddd;	}		.bc_column_input select	{		min-width: 50%;		border: solid 2px #ddd;	}		.bc_col_image input[type="button"]	{		background-color: #ffffff;		border:	solid 2px #ddd;		padding: 4px;		cursor: pointer;	}		.bc_col_image input[type="file"]	{		display: none;	}	.bc_col_image_preview	{		max-width: 300px;		max-height: 150px;		display: none;		border:	solid 2px #ddd;	}		.bc_col_image_delete	{		display: none;		cursor: pointer;		vertical-align: top;		font-size: 14px;		margin-left: 5px;		text-decoration: underline;		color: red;	}		.bc_hiddencolumn	{		display: none;	}		.bc_col_multiline textarea	{		border: solid 2px #ddd;		width: 100%;		font-size: 14px;		resize: none;		height: 40px;	}		.bc_col_multiline_formatting	{		position: relative;		overflow: hidden;		margin-bottom: 4px;	}			.bc_col_multiline_formatting_button		{			position: relative;			float: left;			width: 20px;			line-height: 20px;			text-align: center;			border: solid 1px #ddd;			margin-right: 5px;			cursor: pointer;		}				.bc_col_multiline_formatting_button:hover		{			background-color: #f7f7f7;		}
+		
+	.bc_col_m_n
+	{
+		position: relative;
+		overflow: hidden;
+	}
+	
+		.bc_m_n_element_edit
+		{
+			float: left;
+			font-size: 13px;
+			cursor: pointer;
+			margin: 4px;	
+			overflow: hidden;		
+		}
+	
+		.bc_m_n_selected, .bc_m_n_avail
+		{
+			position: relative;
+			float: left;
+			border: solid 1px #ddd;
+			padding: 5px;
+			height: 100px;
+			width: 200px;
+			overflow-y: auto;
+			border-radius: 10px;
+		}
+		
+		.bc_m_n_selected
+		{
+			margin-right: 20px;
+		}
+		
+	.bc_list_url
+	{
+		color: #000000;
+	}		.bc_column_actions{	position: relative;	width: 100%;	color: #000000;	line-height: 40px;	font-size: 18px;	overflow: hidden;	margin-top: 20px;	margin-bottom: 20px;	font-family: 'open_sansregular';}	.bc_column_actions ul	{		margin: 0px;		padding: 0px;		list-style-type: none;	}		.bc_column_actions li	{		float: left;		margin-left: 5px;		margin-right: 5px;		border: solid 2px #ddd;		border-radius: 5px;		padding-left: 4px;		padding-right: 4px;		cursor: pointer;	}		.bc_column_actions li:first-child	{		margin-left: 0px;	}		.bc_column_actions li:hover	{		background-color: #f7f7f7;	}
