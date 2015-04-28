@@ -346,6 +346,9 @@ class besc_crud
 					case 'url':
 					    $columns[$column['db_name']] = $this->list_url($row, $column);
 					    break;
+					case 'select':
+					    $columns[$column['db_name']] = $this->list_select($row, $column);
+					    break;
 				}
 			}
 			$rows[] = $columns;
@@ -443,16 +446,22 @@ class besc_crud
 		return $this->ci->load->view('besc_crud/table_elements/text', $dummy, true);
 	}
 	
+	protected function list_select($row, $column)
+	{
+	    $dummy = array('options' => $column['options'],
+	                   'value' => $row[$column['db_name']] );
+	    return $this->ci->load->view('besc_crud/table_elements/select', $dummy, true);
+	}	
+	
 	protected function list_image($row, $column)
 	{
-		$dummy = array(  'uploadpath' => $column['uploadpath'],
-				'filename' => $row[$column['db_name']]);
+		$dummy = array( 'uploadpath' => $column['uploadpath'],
+                        'filename' => $row[$column['db_name']]);
 		return $this->ci->load->view('besc_crud/table_elements/image', $dummy, true);
 	}
 	
 	protected function list_m_n_relation($row, $column)
 	{
-		//$table_mn, $table_mn_col_m, $table_mn_col_n, $table_m_value, $table_n, $table_n_value, $table_n_pk
 		$dummy['n_values'] = $this->ci->bc_model->get_m_n_relation($column['table_mn'], $column['table_mn_col_m'], $column['table_mn_col_n'], $row[$this->db_primary_key], $column['table_n'], $column['table_n_value'], $column['table_n_pk']);
 		return $this->ci->load->view('besc_crud/table_elements/m_n_relation', $dummy, true);
 	}	
