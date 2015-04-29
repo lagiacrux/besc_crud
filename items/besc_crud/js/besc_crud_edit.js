@@ -7,7 +7,8 @@ $(document).ready(function()
 	else
 		bc_bindEditListeners();
 	
-	addMNRelationListeners();
+	bc_addMNRelationListeners();
+	bc_addImageListeners();
 });
 
 
@@ -176,8 +177,8 @@ function bc_getData()
 		elements.push
 		(
 			{
-				'name': $(this).find('.col_fname').attr('name').replace('col_', ''),
-				'value': $(this).find('.col_fname').val(),
+				'name': $(this).find('.bc_col_fname').attr('name').replace('col_', ''),
+				'value': $(this).find('.bc_col_fname').val(),
 				'type': 'image'		
 			}
 		);
@@ -245,20 +246,20 @@ function bc_getData()
 }
 
 
-function addMNRelationListeners()
+function bc_addMNRelationListeners()
 {
 	$('.bc_m_n_sel').click(function()
 	{
-		MNRelationClick($(this));
+		bc_MNRelationClick($(this));
 	});
 	
 	$('.bc_m_n_av').click(function()
 	{
-		MNRelationClick($(this));
+		bc_MNRelationClick($(this));
 	});
 }
 
-function MNRelationClick(element)
+function bc_MNRelationClick(element)
 {
 	var clone = element.clone();
 	clone.fadeOut(0);
@@ -277,17 +278,85 @@ function MNRelationClick(element)
 		var target = element.parent().parent().find('.bc_m_n_selected');
 	}
 	
-	//element.animate({'width': 0}, 500, function()
-	//{
-		element.remove();
-	//});
-	//clone.css({'max-width': 0, 'width': 'auto'});
+	element.remove();
 	target.append(clone);
 	clone.click(function()
 	{
-		MNRelationClick($(this));
+		bc_MNRelationClick($(this));
 	});
-	//clone.animate({'max-width': 200}, 1000);
+}
+
+
+function bc_addImageListeners()
+{
+	$('.bc_col_image_upload_btn').click(function()
+	{
+		$(this).parent().find('input[type="file"]').click();
+	});
+	
+	$('.bc_col_image_file').change(function()
+	{
+		bc_uploadFile($(this).attr('id'), $(this).attr('uploadpath'));
+	});		
+	
+	$('.bc_col_image_delete').click(function()
+	{
+		bc_resetUpload($(this).parent());
+	});
+}
+
+function bc_uploadFile(element, u)
+{
+	var file = document.getElementById(element).files[0];
+	var uploadpath = u;
+	var reader = new FileReader();
+	var url;
+	reader.readAsDataURL (file);
+	reader.onload = function(event)
+	{
+		var result = event.target.result;
+		var elem = $('#' + element);
+		var element_name = elem.attr('name').substr(4, elem.attr('name').length -9);
+		$.ajax(
+		{
+			url: bc_upload_url,
+			data: { filename: file.name, element: element_name, data: result },
+			method: 'POST',
+			success: function(data)
+			{
+				var ret = $.parseJSON(data);
+				
+				if(ret.success)
+				{
+					var col = $('#' + element).parent();
+					col.find('.bc_col_image_upload_btn').fadeOut(150, function()
+					{
+						col.find('.bc_col_image_preview').attr('src', rootUrl + '/' + uploadpath + '/' + ret.filename);
+						col.find('a').attr('href', rootUrl + '/' + uploadpath + '/' + ret.filename);
+						col.find('.bc_col_image_preview').fadeIn(150);
+						col.find('.bc_col_image_delete').fadeIn(150);
+						col.find('.bc_col_fname').val(ret.filename);						
+					});
+				}
+				else
+				{
+					show_message('error', 'Error while uploading!');
+				}
+			}
+		});			
+	};
+}
+
+function bc_resetUpload(col)
+{
+	col.find('.bc_col_fname').val('');
+	col.find('.bc_col_image_delete').fadeOut(150);
+	col.find('.bc_col_image_preview').fadeOut(150, function()
+	{
+		col.find('.bc_col_image_preview').attr('src', '');
+		col.find('a').attr('src', '');
+		col.find('.bc_col_image_upload_btn').fadeIn(150);
+	});
 }
 
 

@@ -11,7 +11,7 @@ class besc_crud
 	protected $db_primary_key = "";
 	protected $db_columns = array();
 	
-	protected $states = array('list', 'add', 'insert', 'edit', 'update', 'delete', 'refresh_list');
+	protected $states = array('list', 'add', 'insert', 'edit', 'update', 'delete', 'refresh_list', 'imageupload');
 	protected $state_info = array();
 	protected $base_url = "";
 	
@@ -108,11 +108,13 @@ class besc_crud
 			case 'add':
 			
 				return array(	'bc_insert_url' => $this->base_url . 'insert',
-								'bc_list_url' => $this->base_url
+								'bc_list_url' => $this->base_url,
+								'bc_upload_url' => $this->base_url . 'imageupload'
 					  		);
 			case 'edit':
 				return array(	'bc_edit_url' => $this->base_url . 'update/',
-								'bc_list_url' => $this->base_url
+								'bc_list_url' => $this->base_url,
+								'bc_upload_url' => $this->base_url . 'imageupload'
 				);
 				break;
 			default:
@@ -178,9 +180,13 @@ class besc_crud
 			case 'update':
 				$this->update();
 				break;
+				
+			case 'imageupload':
+			    $this->imageupload();
+			    break;
 		}
 		die();
-		//return true;
+
 	}
 	
 	
@@ -260,7 +266,6 @@ class besc_crud
 						$after_success = $this->saveMNRelation($col, true);
 						break;
 				}
-				echo $after_success;
 			}
 			
 			if($after_success)
@@ -282,6 +287,47 @@ class besc_crud
 		}
 		
 		echo json_encode($result);		
+	}
+	
+	
+	protected function imageupload()
+	{
+	    	    
+        $filename = $_POST['filename'];
+        $col_name = $_POST['element'];
+        $upload_path = $this->db_columns[$col_name]['uploadpath'];
+    
+        if(substr($upload_path, -1) != '/')
+            $upload_path .= '/';
+    
+        $rnd = rand_string(12);
+        $data = explode(',', $_POST['data']);
+    
+        $ext = pathinfo($filename, PATHINFO_EXTENSION);
+    
+        $serverFile = time() . "_" . $rnd . "." . $ext;
+        $fp = fopen(getcwd() . '/' . $upload_path . $serverFile, 'w');
+        	
+        fwrite($fp, base64_decode($data[1]));
+        fclose($fp);
+    
+        
+
+        echo json_encode(array('success' => true,
+                               'filename' => $serverFile));
+	}
+	
+
+	public function getFullUrl() 
+	{
+	    
+	    return
+	    (isset($_SERVER['HTTPS']) ? 'https://' : 'http://').
+	    (isset($_SERVER['REMOTE_USER']) ? $_SERVER['REMOTE_USER'].'@' : '').
+	    (isset($_SERVER['HTTP_HOST']) ? $_SERVER['HTTP_HOST'] : ($_SERVER['SERVER_NAME'].
+	        (isset($_SERVER['HTTPS']) && $_SERVER['SERVER_PORT'] === 443 ||
+	            $_SERVER['SERVER_PORT'] === 80 ? '' : ':'.$_SERVER['SERVER_PORT']))).
+	            substr($_SERVER['SCRIPT_NAME'],0, strrpos($_SERVER['SCRIPT_NAME'], '/'));
 	}
 	
 	
@@ -463,6 +509,7 @@ class besc_crud
 	protected function list_m_n_relation($row, $column)
 	{
 		$dummy['n_values'] = $this->ci->bc_model->get_m_n_relation($column['table_mn'], $column['table_mn_col_m'], $column['table_mn_col_n'], $row[$this->db_primary_key], $column['table_n'], $column['table_n_value'], $column['table_n_pk']);
+		$dummy['table_n_value'] = $column['table_n_value'];
 		return $this->ci->load->view('besc_crud/table_elements/m_n_relation', $dummy, true);
 	}	
 	
@@ -487,7 +534,7 @@ class besc_crud
 		if(substr($col['uploadpath'], -1) != '/')
 			$col['uploadpath'] .= '/';
 		
-		return $this->ci->load->view('v/edit_elements/image', $col, true);
+		return $this->ci->load->view('besc_crud/edit_elements/image', $col, true);
 	}
 
 	protected function edit_select($col)
