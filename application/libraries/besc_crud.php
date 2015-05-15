@@ -10,6 +10,9 @@ class besc_crud
 	protected $db_table = "";
 	protected $db_primary_key = "";
 	protected $db_columns = array();
+	protected $db_where = "1=1";
+	
+	protected $list_columns = array();
 	
 	protected $states = array('list', 'add', 'insert', 'edit', 'update', 'delete', 'refresh_list', 'imageupload');
 	protected $state_info = array();
@@ -47,6 +50,12 @@ class besc_crud
 		return $this->db_columns;
 	}
 	
+	public function list_columns($list_columns = array())
+	{
+	    $this->list_columns = $list_columns != array() ? $list_columns : $this->list_columns;
+	    return $this->list_columns;
+	}
+	
 	public function title($title = null)
 	{
 		$this->title = $title != array() ? $title : $this->title;
@@ -65,7 +74,23 @@ class besc_crud
 		return $this->base_url;		
 	}
 	
+	public function custom_actions($custom_actions = null)
+	{
+	    $this->custom_actions = $custom_actions != null ? $custom_actions : $this->custom_actions;
+	    return $this->custom_actions;	    
+	}
 	
+	public function custom_buttons($custom_buttons = null)
+	{
+	    $this->custom_buttons = $custom_buttons != null ? $custom_buttons : $this->custom_buttons;
+	    return $this->custom_buttons;
+	}
+	
+	public function where($where_string = "")
+	{
+	    $this->db_where = $where_string != "" ? $where_string : $this->db_where;
+	    return $this->db_where;	    
+	}
 	
 	
 	
@@ -126,6 +151,7 @@ class besc_crud
 	{
 		echo json_encode(array('success' => false,
 							   'message' => $message));
+		die();
 	}
 	
 	protected function get_base_url()
@@ -162,7 +188,7 @@ class besc_crud
 				break;
 				
 			case 'refresh_list':
-				return $this->render_list(true);
+				$this->render_list(true);
 				break;
 				
 			case 'add':
@@ -209,21 +235,58 @@ class besc_crud
 	protected function insert()
 	{
 		$content = json_decode(file_get_contents('php://input'));
+		
 		$col = array();
+		$col_after = array();
 		foreach($content as $column)
 		{
-			$col[$column->name] = $column->value;
+			switch($column->type)
+			{
+				case 'text':
+				case 'hidden':
+				case 'image':
+				case 'multiline':
+				case 'select':
+					$col[$column->name] = $column->value;
+					break;
+				case 'm_n_relation':
+					$col_after[] = $column;
+					break;
+				case 'url':
+				    $col[$column->name] = prep_url($column->value);
+				    break;
+			}
 		}
-		
-		if($this->ci->bc_model->insert($this->db_table, $col) > 0)
+		$new_id = $this->ci->bc_model->insert($this->db_table, $col);
+		if($new_id > 0)
 		{
-			$result['success'] = true;
-			$result['message'] = $this->title . ' successfully inserted.';
+		    $after_success = true;
+		    
+		    foreach($col_after as $col)
+		    {
+		        switch($col->type)
+		        {
+		            case 'm_n_relation':
+		                $after_success = $this->saveMNRelation($col, true, $new_id);
+		                break;
+		        }
+		    }
+		    
+			if($after_success)
+			{
+			    $result['success'] = true;
+			    $result['message'] = $this->title . ' successfully added.';
+			}
+			else
+			{
+			    $result['success'] = false;
+			    $result['message'] = 'Error while adding ' . $this->title . '.';
+			}
 		}
 		else
 		{
 			$result['success'] = false;
-			$result['message'] = 'Error while inserting ' . $this->title . '.';			
+			$result['message'] = 'Error while adding ' . $this->title . '.';			
 		}		
 		
 		echo json_encode($result);
@@ -300,7 +363,7 @@ class besc_crud
         if(substr($upload_path, -1) != '/')
             $upload_path .= '/';
     
-        $rnd = rand_string(12);
+        $rnd = $this->rand_string(12);
         $data = explode(',', $_POST['data']);
     
         $ext = pathinfo($filename, PATHINFO_EXTENSION);
@@ -317,7 +380,17 @@ class besc_crud
                                'filename' => $serverFile));
 	}
 	
-
+	function rand_string($length)
+	{
+	    $chars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+	    $str = "";
+	    $str = base64_encode(openssl_random_pseudo_bytes($length, $strong));
+	    $str = substr($str, 0, $length);
+	    $str = preg_replace("/[^a-zA-Z0-9\s]/", "", $str);
+	    return $str;
+	}
+	
+	
 	public function getFullUrl() 
 	{
 	    
@@ -331,7 +404,7 @@ class besc_crud
 	}
 	
 	
-	protected function saveMNRelation($column, $delete = false)
+	protected function saveMNRelation($column, $delete = false, $pk = null)
 	{
 		$m = null;
 		foreach($this->db_columns as $c)
@@ -345,12 +418,12 @@ class besc_crud
 		{
 			if($delete)
 			{
-				$this->ci->bc_model->delete_m_n_relationByID($m['table_mn'], $m['table_mn_col_m'], $this->state_info->first_parameter);
+				$this->ci->bc_model->delete_m_n_relationByID($m['table_mn'], $m['table_mn_col_m'], $pk == null ? $this->state_info->first_parameter : $pk);
 			}
 			$batch = array();
 			foreach($column->selected as $sel)
 			{
-				$batch[] = array($m['table_mn_col_m'] => $this->state_info->first_parameter, $m['table_mn_col_n'] => $sel);
+				$batch[] = array($m['table_mn_col_m'] => $pk == null ? $this->state_info->first_parameter : $pk, $m['table_mn_col_n'] => $sel);
 			}
 			return $this->ci->bc_model->insert_m_n_relation($m['table_mn'], $batch);
 		}
@@ -362,12 +435,18 @@ class besc_crud
 	
 	protected function render_list($ajax = false)
 	{
-		foreach($this->db_columns as $column)
+		foreach($this->db_columns as $key => $column)
 		{
-			$data['headers'][] = $column['display_as'];
+		    $show_in_list = true;
+		    if($this->list_columns != array())
+		        $show_in_list = in_array($key, $this->list_columns);
+		    
+		    if($show_in_list)
+		        $data['headers'][] = isset($column['display_as']) ? $column['display_as'] : $key;
+		        
 		}
 		
-		$get = $this->ci->bc_model->get($this->db_table);
+		$get = $this->ci->bc_model->get($this->db_table, $this->db_where);
 		
 		$rows = array();
 		
@@ -375,27 +454,42 @@ class besc_crud
 		{
 			$columns = array();
 			$columns['pk'] = $row[$this->db_primary_key];
-			foreach($this->db_columns as $column)
+			foreach($this->db_columns as $key => $column)
 			{
-				switch($column['type'])
-				{
-					case 'hidden':
-					case 'text':
-						$columns[$column['db_name']] = $this->list_text($row, $column);
-						break;
-					case 'image':
-						$columns[$column['db_name']] = $this->list_image($row, $column);
-						break;
-					case 'm_n_relation':
-						$columns['m_n_relation'] = $this->list_m_n_relation($row, $column);
-						break;
-					case 'url':
-					    $columns[$column['db_name']] = $this->list_url($row, $column);
-					    break;
-					case 'select':
-					    $columns[$column['db_name']] = $this->list_select($row, $column);
-					    break;
-				}
+			    $show_in_list = true;
+			    if($this->list_columns != array())
+			    {
+			        $show_in_list = in_array($key, $this->list_columns);
+			    }
+			    
+			    if($show_in_list)
+			    {
+    				switch($column['type'])
+    				{
+    					case 'hidden':
+    					case 'text':
+    						$columns[$key] = $this->list_text($row, $column);
+    						break;
+    					case 'image':
+    						$columns[$key] = $this->list_image($row, $column);
+    						break;
+    					case 'm_n_relation':
+    						$columns[$key] = $this->list_m_n_relation($row, $column);
+    						break;
+    					case 'url':
+    					    $columns[$key] = $this->list_url($row, $column);
+    					    break;
+    					case 'select':
+    					    $columns[$key] = $this->list_select($row, $column);
+    					    break;
+    					case 'image_gallery':
+    					    $columns[$key] = $this->list_image_gallery($row, $column);
+    					    break;
+    					case 'multiline':
+    					    $columns[$key] = $this->list_multiline($row, $column);
+    					    break;
+    				}
+			    }
 			}
 			$rows[] = $columns;
 		}
@@ -434,13 +528,13 @@ class besc_crud
 		}
 		
 		$i = 0;
-		foreach($this->db_columns as $col)
+		foreach($this->db_columns as $key => $col)
 		{
 			$col['num_row'] = $i;
 			if(!isset($col['col_info']))
 				$col['col_info'] = "";
 
-			if($this->state_info->first_parameter != null && $col['type'] != 'm_n_relation')
+			if($this->state_info->first_parameter != null && $col['type'] != 'm_n_relation' && $col['type'] != 'image_gallery')
 				$col['value'] = $get[$col['db_name']];
 				
 			switch($col['type'])
@@ -519,6 +613,24 @@ class besc_crud
 	    return $this->ci->load->view('besc_crud/table_elements/url', $dummy, true);
 	}	
 	
+	protected function list_image_gallery($row, $column)
+	{
+	    $items = $this->ci->bc_model->get_image_gallery_items($column['gallery_table'], $column['gallery_table_fk'], $row[$this->db_primary_key]);
+	    $dummy = array('items' => ($items == false ? array() : $items),
+	                   'uploadpath' => $column['uploadpath'],
+	                   'fname' => $column['gallery_fname']);
+	    
+	    return $this->ci->load->view('besc_crud/table_elements/image_gallery', $dummy, true);
+	}
+	
+	protected function list_multiline($row, $column)
+	{
+	    $dummy = array('text' => nl2br($row[$column['db_name']]));
+	    return $this->ci->load->view('besc_crud/table_elements/text', $dummy, true);
+	}	
+	
+	
+	
 	protected function edit_text($col)
 	{
 		return $this->ci->load->view('besc_crud/edit_elements/text', $col, true);
@@ -542,7 +654,7 @@ class besc_crud
 		return $this->ci->load->view('besc_crud/edit_elements/select', $col, true);
 	}
 	
-	protected function edit_multiline()
+	protected function edit_multiline($col)
 	{
 		if(!isset($col['formatting']))
 			$col['formatting'] = array();
@@ -570,4 +682,6 @@ class besc_crud
 	{
 	    return $this->ci->load->view('besc_crud/edit_elements/url', $col, true);
 	}	
+	
+
 }

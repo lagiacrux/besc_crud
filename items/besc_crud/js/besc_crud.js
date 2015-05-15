@@ -18,4 +18,5 @@ function showMessage(type, message)
 	{
 		
 	});*/
+	alert(message);
 }

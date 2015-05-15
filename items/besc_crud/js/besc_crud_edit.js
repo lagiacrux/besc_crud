@@ -9,6 +9,7 @@ $(document).ready(function()
 	
 	bc_addMNRelationListeners();
 	bc_addImageListeners();
+	bc_addMultilineListeners();
 });
 
 
@@ -359,4 +360,34 @@ function bc_resetUpload(col)
 	});
 }
 
+function bc_addMultilineListeners()
+{
+	$('.bc_col_multiline_formatting_button').click(function()
+	{
+		addTags($(this).parent().parent(), $(this).attr('tag'));
+	});	
+}
 
+function addTags(multiline, tag)
+{
+	var ta = multiline.find('textarea');
+	
+	var sel = ta.getSelection();
+	var text = ta.val();
+	if(sel.start == sel.end)
+	{
+		var before = text.substring(0, sel.start);
+		var after = text.substring(sel.start, text.length);
+		
+		var newtext = before + '<' + tag + '></' + tag + '>' + after;
+	}
+	else
+	{
+		var before = text.substring(0, sel.start);
+		var after = text.substring(sel.end, text.length);
+		var selection = text.substring(sel.start, sel.start + sel.length);
+		var newtext = before + '<' + tag + '>' + selection + '</' + tag + '>' + after;
+	}
+
+	ta.val(newtext);
+}

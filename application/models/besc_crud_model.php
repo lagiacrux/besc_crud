@@ -2,15 +2,16 @@
 
 class besc_crud_model extends CI_Model  
 {
-	public function get($table)
+	public function get($table, $where)
 	{
+	    $this->db->where($where);
 		return $this->db->get($table);
 	}
 	
 	public function insert($table, $data)
 	{
 		$this->db->insert($table, $data);
-		return $this->db->affected_rows();	
+		return $this->db->insert_id();	
 	}
 	
 	public function delete($table, $pk_column, $pk_value)
@@ -19,7 +20,10 @@ class besc_crud_model extends CI_Model
 		$this->db->where($pk_column, $pk_value);
 		$this->db->delete($table);
 		$this->db->trans_complete();
-		return $this->db->affected_rows();
+		if ($this->db->trans_status() === FALSE)
+		    return false;
+	    else
+	        return true;
 	}
 	
 	public function getByID($table, $pk_column, $pk_value)
@@ -83,6 +87,20 @@ class besc_crud_model extends CI_Model
 	    $this->db->insert_batch($table_mn, $batchdata);
 	    $this->db->trans_complete();
 	    return $this->db->trans_status() === false ? false : true;
+	}
+	
+	
+	
+	public function get_image_gallery_items($table, $fk, $key)
+	{
+	    $this->db->trans_start();
+	    $this->db->where($fk, $key);
+	    $get = $this->db->get($table);
+	    $this->db->trans_complete();
+	    if($this->db->trans_status() === false)
+	        return false;
+	    else 
+	        return $get;
 	}
 }
 ?>

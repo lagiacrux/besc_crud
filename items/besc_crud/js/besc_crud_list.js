@@ -58,7 +58,7 @@ function bc_refresh()
 	$.ajax(
 	{
         url: bc_refresh_url,
-        type: "POST",
+        type: "GET",
         dataType: "json",
         beforeSend: function()
         {
@@ -77,9 +77,9 @@ function bc_refresh()
 				showMessage('error', 'ERROR!!!');
 			}
         },
-        error: function(data)
+        error: function(jqXHR, textStatus, errorThrown)
         {
-        	showMessage('error', "ERROR!!!");
+        	showMessage('error', errorThrown);
         }
     });	
 }
