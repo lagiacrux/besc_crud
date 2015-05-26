@@ -3,14 +3,14 @@
 define('BC_ADD', 0);
 define('BC_EDIT', 1);
 
-class besc_crud 
+class Besc_crud 
 {
 	protected $ci = null;
 	
 	protected $db_table = "";
 	protected $db_primary_key = "";
 	protected $db_columns = array();
-	protected $db_where = "";
+	protected $db_where = "1=1";
 	
 	protected $list_columns = array();
 	
@@ -19,16 +19,19 @@ class besc_crud
 	protected $base_url = "";
 	
 	protected $title = "";
-	protected $hidden_action = array();
 	
 	protected $custom_actions = array();
 	protected $custom_buttons = array();
+	
+	protected $allow_add = true;
+	protected $allow_delete = true;
+	protected $allow_edit = true;
 	
 	
 	function __construct()
 	{
 		$this->ci = &get_instance();
-		$this->ci->load->model('besc_crud_model', 'bc_model');
+		$this->ci->load->model('Besc_crud_model', 'bc_model');
 	}	
 	
 	
@@ -62,12 +65,6 @@ class besc_crud
 		return $this->title;
 	}
 	
-	public function hide_action($actions = array())
-	{
-		$this->hidden_action = $actions != array() ? $actions : $this->hidden_action;
-		return $this->hidden_action;
-	}
-	
 	public function base_url($url = null)
 	{
 		$this->base_url = $url != null ? $url : $this->base_url;
@@ -92,6 +89,23 @@ class besc_crud
 	    return $this->db_where;	    
 	}
 	
+	public function unset_add()
+	{
+	    $this->allow_add = false;
+	    return $this->allow_add;
+	}
+
+	public function unset_edit()
+	{
+	    $this->allow_edit = false;
+	    return $this->allow_edit;
+	}
+	
+	public function unset_delete()
+	{
+	    $this->allow_delete = false;
+	    return $this->allow_delete;
+	}
 	
 	
 	protected function get_state_info_from_url()
@@ -184,7 +198,8 @@ class besc_crud
 				break;
 
 			case 'delete':
-				$this->delete();
+			    if($this->allow_delete)
+				    $this->delete();
 				break;
 				
 			case 'refresh_list':
@@ -192,19 +207,23 @@ class besc_crud
 				break;
 				
 			case 'add':
-				return $this->render_edit();
+			    if($this->allow_add)
+				    return $this->render_edit();
 				break;
 
 			case 'edit':
-				return $this->render_edit();
+			    if($this->allow_edit)
+			        return $this->render_edit();
 				break;	
 				
 			case 'insert':
-				$this->insert();
+			    if($this->allow_add)
+				    $this->insert();
 				break;
 				
 			case 'update':
-				$this->update();
+			    if($this->allow_edit)
+				    $this->update();
 				break;
 				
 			case 'imageupload':
@@ -288,8 +307,8 @@ class besc_crud
 			$result['success'] = false;
 			$result['message'] = 'Error while adding ' . $this->title . '.';			
 		}		
-		
-		echo json_encode($result);
+
+	    echo json_encode($result);
 	}
 	
 	protected function update()
@@ -495,7 +514,9 @@ class besc_crud
 		}
 		$data['rows'] = $rows;
 		$data['title'] = $this->title;
-		$data['hide_add'] = (isset($this->hidden_action['hide_add'])) ? true : false;
+		$data['allow_add'] = $this->allow_add;
+		$data['allow_edit'] = $this->allow_edit;
+		$data['allow_delete'] = $this->allow_delete;
 		$data['custom_button'] = $this->custom_buttons;
 		$data['custom_action'] = $this->custom_actions;
 		$data['bc_urls'] =  $this->get_urls();
