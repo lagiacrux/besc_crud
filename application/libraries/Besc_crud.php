@@ -140,19 +140,19 @@ class Besc_crud
 		{
 			case 'list':
 				return array(	'bc_delete_url' => $this->base_url . 'delete/',
-								'bc_list_url' => $this->base_url,
-								'bc_refresh_url' => $this->base_url. 'refresh_list/'
+								'bc_list_url' => substr($this->base_url, 0, -1),
+								'bc_refresh_url' => $this->base_url . 'refresh_list/'
 					  		);
 				break;
 			case 'add':
 			
 				return array(	'bc_insert_url' => $this->base_url . 'insert',
-								'bc_list_url' => $this->base_url,
+								'bc_list_url' => substr($this->base_url, 0, -1),
 								'bc_upload_url' => $this->base_url . 'imageupload'
 					  		);
 			case 'edit':
 				return array(	'bc_edit_url' => $this->base_url . 'update/',
-								'bc_list_url' => $this->base_url,
+								'bc_list_url' => substr($this->base_url, 0, -1),
 								'bc_upload_url' => $this->base_url . 'imageupload'
 				);
 				break;
