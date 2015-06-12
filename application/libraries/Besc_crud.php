@@ -10,7 +10,7 @@ class Besc_crud
 	protected $db_table = "";
 	protected $db_primary_key = "";
 	protected $db_columns = array();
-	protected $db_where = "1=1";
+	protected $db_where = "";
 	
 	protected $list_columns = array();
 	
