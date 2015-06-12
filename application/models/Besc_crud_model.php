@@ -4,8 +4,7 @@ class Besc_crud_model extends CI_Model
 {
 	public function get($table, $where)
 	{
-	    if($where != "")
-	       $this->db->where($where);
+	    $this->db->where($where);
 		return $this->db->get($table);
 	}
 	

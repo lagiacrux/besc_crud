@@ -10,6 +10,7 @@ $(document).ready(function()
 	bc_addMNRelationListeners();
 	bc_addImageListeners();
 	bc_addMultilineListeners();
+	bc_addDatepickerListeners();
 });
 
 
@@ -243,7 +244,45 @@ function bc_getData()
 		);
 	});	
 	
+	// date
+	$('.bc_edit_table').find('.bc_col_date').each(function()
+	{
+		/*var value = $(this).find('input').val();
+		if(value == "")
+			value = 0;*/
+		elements.push
+		( 
+			{
+				'name': $(this).find('input').attr('name').replace('col_', ''),
+				'value': $(this).find('input').val(),
+				'type': 'date'
+			}
+		);
+	});		
+	
 	return elements;		
+}
+
+
+function bc_addDatepickerListeners()
+{
+	$('.bc_col_date').each(function()
+	{
+		$(this).find('input').datepicker(
+		{
+			dateFormat: $(this).find('input').attr('format'),
+		});
+		
+		$(this).find('.bc_col_date_calendar').click(function()
+		{
+			$(this).parent().find('input').focus();
+		});
+		
+		$(this).find('.bc_col_date_reset').click(function()
+		{
+			$(this).parent().find('input').datepicker('setDate', null);
+		});
+	});
 }
 
 
@@ -332,12 +371,17 @@ function bc_uploadFile(element, u)
 					var col = $('#' + element).parent();
 					col.find('.bc_col_image_upload_btn').fadeOut(150, function()
 					{
-						col.find('.bc_col_image_preview').attr('src', rootUrl + '/' + uploadpath + '/' + ret.filename);
+						col.find('.bc_col_image_preview').attr('src', rootUrl + '/' + uploadpath + ret.filename);
 						col.find('a').attr('href', rootUrl + '/' + uploadpath + '/' + ret.filename);
 						col.find('.bc_col_image_preview').fadeIn(150);
 						col.find('.bc_col_image_delete').fadeIn(150);
 						col.find('.bc_col_fname').val(ret.filename);						
 					});
+					
+					if(col.attr('callback_after_upload') !== undefined)
+					{
+						window[col.attr('callback_after_upload')](ret.filename, uploadpath, element, result);
+					}
 				}
 				else
 				{

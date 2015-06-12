@@ -10,7 +10,7 @@ class Besc_crud
 	protected $db_table = "";
 	protected $db_primary_key = "";
 	protected $db_columns = array();
-	protected $db_where = "";
+	protected $db_where = "1=1";
 	
 	protected $list_columns = array();
 	
@@ -26,6 +26,8 @@ class Besc_crud
 	protected $allow_add = true;
 	protected $allow_delete = true;
 	protected $allow_edit = true;
+	
+	protected $custom_upload = null;
 	
 	
 	function __construct()
@@ -105,6 +107,12 @@ class Besc_crud
 	{
 	    $this->allow_delete = false;
 	    return $this->allow_delete;
+	}
+	
+	public function custom_upload($custom_upload = null) 
+	{
+	    $this->custom_upload = $custom_upload != null ? $custom_upload : $this->custom_upload;
+	    return $this->custom_upload;
 	}
 	
 	
@@ -274,6 +282,9 @@ class Besc_crud
 				case 'url':
 				    $col[$column->name] = prep_url($column->value);
 				    break;
+			    case 'date':
+			        $col[$column->name] = date('Y-m-d', strtotime($column->value));
+			        break;
 			}
 		}
 		$new_id = $this->ci->bc_model->insert($this->db_table, $col);
@@ -334,6 +345,9 @@ class Besc_crud
 				case 'url':
 				    $col[$column->name] = prep_url($column->value);
 				    break;
+			    case 'date':
+			        $col[$column->name] = date('Y-m-d H:i:s', strtotime($column->value));
+			        break;
 			}
 		}
 		
@@ -374,26 +388,31 @@ class Besc_crud
 	
 	protected function imageupload()
 	{
-	    	    
-        $filename = $_POST['filename'];
-        $col_name = $_POST['element'];
-        $upload_path = $this->db_columns[$col_name]['uploadpath'];
-    
-        if(substr($upload_path, -1) != '/')
-            $upload_path .= '/';
-    
-        $rnd = $this->rand_string(12);
-        $data = explode(',', $_POST['data']);
-    
-        $ext = pathinfo($filename, PATHINFO_EXTENSION);
-    
-        $serverFile = time() . "_" . $rnd . "." . $ext;
-        $fp = fopen(getcwd() . '/' . $upload_path . $serverFile, 'w');
-        	
-        fwrite($fp, base64_decode($data[1]));
-        fclose($fp);
-    
-        
+	    $filename = $_POST['filename'];
+	    $col_name = $_POST['element'];
+	    
+	    if(isset($this->custom_upload[$col_name]))
+	    {
+	        $serverFile = call_user_func($this->custom_upload[$col_name], $this->db_columns[$col_name]['uploadpath']);
+	    }   
+	    else
+	    {
+	        $upload_path = $this->db_columns[$col_name]['uploadpath'];
+	        
+	        if(substr($upload_path, -1) != '/')
+	            $upload_path .= '/';
+	        
+	        $rnd = $this->rand_string(12);
+	        $data = explode(',', $_POST['data']);
+	        
+	        $ext = pathinfo($filename, PATHINFO_EXTENSION);
+	        
+	        $serverFile = time() . "_" . $rnd . "." . $ext;
+	        $fp = fopen(getcwd() . '/' . $upload_path . $serverFile, 'w');
+	         
+	        fwrite($fp, base64_decode($data[1]));
+	        fclose($fp);
+	    } 
 
         echo json_encode(array('success' => true,
                                'filename' => $serverFile));
@@ -444,7 +463,10 @@ class Besc_crud
 			{
 				$batch[] = array($m['table_mn_col_m'] => $pk == null ? $this->state_info->first_parameter : $pk, $m['table_mn_col_n'] => $sel);
 			}
-			return $this->ci->bc_model->insert_m_n_relation($m['table_mn'], $batch);
+			if(count($batch) > 0)
+                return $this->ci->bc_model->insert_m_n_relation($m['table_mn'], $batch);
+			else 
+			    return true;
 		}
 		else
 			return false;
@@ -507,6 +529,9 @@ class Besc_crud
     					case 'multiline':
     					    $columns[$key] = $this->list_multiline($row, $column);
     					    break;
+    					case 'date':
+    					    $columns[$key] = $this->list_date($row, $column);
+    					    break;
     				}
 			    }
 			}
@@ -554,6 +579,8 @@ class Besc_crud
 			$col['num_row'] = $i;
 			if(!isset($col['col_info']))
 				$col['col_info'] = "";
+			
+			
 
 			if($this->state_info->first_parameter != null && $col['type'] != 'm_n_relation' && $col['type'] != 'image_gallery')
 				$col['value'] = $get[$col['db_name']];
@@ -573,6 +600,8 @@ class Besc_crud
 					$columns[($i *-1)-2] = $this->edit_hidden($col);
 					break;
 				case 'image':
+				    if(!isset($col['js_callback_after_upload']))
+				        $col['js_callback_after_upload'] = "";
 					$columns[$i] = $this->edit_image($col);
 					break;
 				case 'm_n_relation':
@@ -580,6 +609,9 @@ class Besc_crud
 					break;
 				case 'url':
 				    $columns[$i] = $this->edit_url($col);
+				    break;
+				case 'date':
+				    $columns[$i] = $this->edit_date($col);
 				    break;
 			}
 			$i++;
@@ -648,7 +680,16 @@ class Besc_crud
 	{
 	    $dummy = array('text' => nl2br($row[$column['db_name']]));
 	    return $this->ci->load->view('besc_crud/table_elements/text', $dummy, true);
-	}	
+	}
+	
+	protected function list_date($row, $column)
+	{
+	    if($row[$column['db_name']] != null && $row[$column['db_name']] != "0000-00-00 00:00:00" && $row[$column['db_name']] != "" && $row[$column['db_name']] != "1970-01-01 01:00:00")
+	        $dummy = array('date' => date($column['list_format'], strtotime($row[$column['db_name']])));
+	    else 
+            $dummy = array('date' => "");
+	    return $this->ci->load->view('besc_crud/table_elements/date', $dummy, true);
+	}
 	
 	
 	
@@ -703,6 +744,11 @@ class Besc_crud
 	{
 	    return $this->ci->load->view('besc_crud/edit_elements/url', $col, true);
 	}	
+	
+	protected function edit_date($col)
+	{
+	    return $this->ci->load->view('besc_crud/edit_elements/date', $col, true);
+	}
 	
 
 }
