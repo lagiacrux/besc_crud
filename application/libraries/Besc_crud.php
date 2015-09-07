@@ -14,7 +14,7 @@ class Besc_crud
 	
 	protected $list_columns = array();
 	
-	protected $states = array('list', 'add', 'insert', 'edit', 'update', 'delete', 'refresh_list', 'imageupload');
+	protected $states = array('list', 'add', 'insert', 'edit', 'update', 'delete', 'refresh_list', 'imageupload', 'validation');
 	protected $state_info = array();
 	protected $base_url = "";
 	
@@ -156,12 +156,14 @@ class Besc_crud
 			
 				return array(	'bc_insert_url' => $this->base_url . 'insert',
 								'bc_list_url' => substr($this->base_url, 0, -1),
-								'bc_upload_url' => $this->base_url . 'imageupload'
+								'bc_upload_url' => $this->base_url . 'imageupload',
+								'bc_validation_url' => $this->base_url . 'validation',
 					  		);
 			case 'edit':
 				return array(	'bc_edit_url' => $this->base_url . 'update/',
 								'bc_list_url' => substr($this->base_url, 0, -1),
-								'bc_upload_url' => $this->base_url . 'imageupload'
+								'bc_upload_url' => $this->base_url . 'imageupload',
+								'bc_validation_url' => $this->base_url . 'validation',
 				);
 				break;
 			default:
@@ -237,9 +239,68 @@ class Besc_crud
 			case 'imageupload':
 			    $this->imageupload();
 			    break;
+			    
+			case 'validation':
+			    $this->validate();
+			    break;
 		}
 		die();
 
+	}
+	
+	
+	protected function validate()
+	{
+	    $this->ci->load->library('form_validation');
+	    
+	    $validate_array = array();
+	    $content = json_decode(file_get_contents('php://input'));
+	    foreach($content as $column)
+	    {
+	        //echo $column->name;
+	        
+	        if(isset($this->db_columns[$column->name]['validation']) && $this->db_columns[$column->name]['validation'] != '')
+	        {
+    	        switch($column->type)
+    	        {
+    	            case 'text':
+    	            case 'hidden':
+    	            case 'image':
+    	            case 'multiline':
+    	            case 'select':
+    	                $validate_array[$column->name] = $column->value;
+    	                break;
+    	            case 'm_n_relation':
+    	                break;
+    	            case 'url':
+    	                $validate_array[$column->name] = prep_url($column->value);
+    	                break;
+    	            case 'date':
+    	                $validate_array[$column->name] = date('Y-m-d', strtotime($column->value));
+    	                break;
+    	        }
+    	        
+    	        $this->ci->form_validation->set_rules($column->name, isset($this->db_columns[$column->name]['display_as']) ? $this->db_columns[$column->name]['display_as'] : $this->db_columns[$column->name]['db_name'], $this->db_columns[$column->name]['validation']);
+	        }
+	    }
+	    
+	    $this->ci->form_validation->set_data($validate_array);
+	    $this->ci->form_validation->set_message('required', '{field} is mandatory.');
+	    $this->ci->form_validation->set_error_delimiters('',';');
+	    if ($this->ci->form_validation->run() == FALSE)
+	    {
+	        echo json_encode(array(
+                'success' => false,
+	            'errors'=> validation_errors(),
+	        ));
+	    }
+	    else
+	    {
+	        echo json_encode(array(
+	            'success' => true,
+	            'message' => 'success validation',
+            ));
+	    }
 	}
 	
 	
@@ -532,6 +593,9 @@ class Besc_crud
     					case 'date':
     					    $columns[$key] = $this->list_date($row, $column);
     					    break;
+					    case 'combobox':
+					        $columns[$key] = $this->list_combobox($row, $column);
+					        break;    					    
     				}
 			    }
 			}
@@ -613,6 +677,9 @@ class Besc_crud
 				case 'date':
 				    $columns[$i] = $this->edit_date($col);
 				    break;
+			    case 'combobox':
+			        $columns[$i] = $this->edit_combobox($col);
+			        break;
 			}
 			$i++;
 		}
@@ -691,6 +758,13 @@ class Besc_crud
 	    return $this->ci->load->view('besc_crud/table_elements/date', $dummy, true);
 	}
 	
+	protected function list_combobox($row, $column)
+	{
+	    $dummy = array('options' => $column['options'],
+	        'value' => $row[$column['db_name']] );
+	    return $this->ci->load->view('besc_crud/table_elements/combobox', $dummy, true);
+	}
+	
 	
 	
 	protected function edit_text($col)
@@ -748,6 +822,11 @@ class Besc_crud
 	protected function edit_date($col)
 	{
 	    return $this->ci->load->view('besc_crud/edit_elements/date', $col, true);
+	}
+	
+    protected function edit_combobox($col)
+	{
+		return $this->ci->load->view('besc_crud/edit_elements/combobox', $col, true);
 	}
 	
 

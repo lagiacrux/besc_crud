@@ -11,7 +11,14 @@ $(document).ready(function()
 	bc_addImageListeners();
 	bc_addMultilineListeners();
 	bc_addDatepickerListeners();
+	bc_addComboboxListeners();
 });
+
+
+function bc_addComboboxListeners()
+{
+
+}
 
 
 function bc_bindAddListeners()
@@ -55,30 +62,55 @@ function bc_bindEditListeners()
 
 function bc_add()
 {
+	
 	$.ajax(
 	{
-        url: bc_insert_url,
+        url: bc_validation_url,
         data: JSON.stringify(bc_getData()),
         contentType: "application/json; charset=utf-8",
         type: "POST",
         dataType: "json",
         success: function(data) 
         {
-        	if(data.success)
+        	if(!data.success)
         	{
-        		showMessage('success', data.message);
-        		if(bc_and_go_back)
-				{
-					window.location.href = bc_list_url;
-				}
-				else
-				{
-					bc_resetData();
-				}
+        		console.log(data.errors);
+        		var errors = data.errors.replace('\n', '').split(';');
+        		for(var i = 0 ; i+1 < errors.length ; i++)
+        		{
+        			if(errors[i] != '')
+        				showMessage('error', errors[i]);
+        		}
         	}
 			else
 			{
-				showMessage('error', data.message);
+				$.ajax(
+				{
+			        url: bc_insert_url,
+			        data: JSON.stringify(bc_getData()),
+			        contentType: "application/json; charset=utf-8",
+			        type: "POST",
+			        dataType: "json",
+			        success: function(data) 
+			        {
+			        	if(data.success)
+			        	{
+			        		showMessage('success', data.message);
+			        		if(bc_and_go_back)
+							{
+								window.location.href = bc_list_url;
+							}
+							else
+							{
+								bc_resetData();
+							}
+			        	}
+						else
+						{
+							showMessage('error', data.message);
+						}
+			        }
+			    });	
 			}
         }
     });	
@@ -88,27 +120,51 @@ function bc_edit()
 {
 	$.ajax(
 	{
-        url: bc_edit_url + bc_pk_value,
+        url: bc_validation_url,
         data: JSON.stringify(bc_getData()),
         contentType: "application/json; charset=utf-8",
         type: "POST",
         dataType: "json",
         success: function(data) 
         {
-        	if(data.success)
+        	if(!data.success)
         	{
-        		showMessage('success', data.message);
-        		if(bc_and_go_back)
-				{
-					window.location.href = bc_list_url;
-				}
+        		console.log(data.errors);
+        		var errors = data.errors.replace('\n', '').split(';');
+        		for(var i = 0 ; i+1 < errors.length ; i++)
+        		{
+        			if(errors[i] != '')
+        				showMessage('error', errors[i]);
+        		}
         	}
 			else
 			{
-				showMessage('error', data.message);
+				$.ajax(
+				{
+			        url: bc_edit_url + bc_pk_value,
+			        data: JSON.stringify(bc_getData()),
+			        contentType: "application/json; charset=utf-8",
+			        type: "POST",
+			        dataType: "json",
+			        success: function(data) 
+			        {
+			        	if(data.success)
+			        	{
+			        		showMessage('success', data.message);
+			        		if(bc_and_go_back)
+							{
+								window.location.href = bc_list_url;
+							}
+			        	}
+						else
+						{
+							showMessage('error', data.message);
+						}
+			        }
+			    });
 			}
         }
-    });	
+    });
 }
 
 
@@ -224,6 +280,7 @@ function bc_getData()
 		elements.push
 		( 
 			{
+				'name': $(this).attr('m_n_relation_id'),
 				'relation_id': $(this).attr('m_n_relation_id'),
 				'selected': selected,
 				'type': 'm_n_relation'
