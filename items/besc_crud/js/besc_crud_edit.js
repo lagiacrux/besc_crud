@@ -65,7 +65,7 @@ function bc_add()
 	
 	$.ajax(
 	{
-        url: bc_validation_url,
+        url: bc_validation_url + 'null',
         data: JSON.stringify(bc_getData()),
         contentType: "application/json; charset=utf-8",
         type: "POST",
@@ -74,13 +74,7 @@ function bc_add()
         {
         	if(!data.success)
         	{
-        		console.log(data.errors);
-        		var errors = data.errors.replace('\n', '').split(';');
-        		for(var i = 0 ; i+1 < errors.length ; i++)
-        		{
-        			if(errors[i] != '')
-        				showMessage('error', errors[i]);
-        		}
+        		bc_validate_errors(data);
         	}
 			else
 			{
@@ -120,7 +114,7 @@ function bc_edit()
 {
 	$.ajax(
 	{
-        url: bc_validation_url,
+        url: bc_validation_url + bc_pk_value,
         data: JSON.stringify(bc_getData()),
         contentType: "application/json; charset=utf-8",
         type: "POST",
@@ -129,13 +123,7 @@ function bc_edit()
         {
         	if(!data.success)
         	{
-        		console.log(data.errors);
-        		var errors = data.errors.replace('\n', '').split(';');
-        		for(var i = 0 ; i+1 < errors.length ; i++)
-        		{
-        			if(errors[i] != '')
-        				showMessage('error', errors[i]);
-        		}
+        		bc_validate_errors(data);
         	}
 			else
 			{
@@ -491,4 +479,50 @@ function addTags(multiline, tag)
 	}
 
 	ta.val(newtext);
+}
+
+
+function bc_validate_errors(data)
+{
+	var error_color = getCSS('background-color', 'bc_error_highlight');
+	var scroll_to = 99999;
+	
+	for (var key in data.error_columns)
+	{
+		var new_scroll_to = bc_validate_error(data.error_columns[key], error_color);
+		if(new_scroll_to < scroll_to)
+			scroll_to = new_scroll_to;
+	}
+	
+	console.log(scroll_to);
+	$(".bc_edit_table").parent().scrollTop(scroll_to);
+}
+
+function bc_validate_error(data, error_color)
+{
+	var col = $('.bc_column[col_name="' + data.name + '"]');
+	col.animate({'background-color': error_color}, 150, "swing", function()
+	{
+		col.find('.bc_error_text').text(data.error);
+		col.find('input').css({'border': 'solid 2px ' + error_color});
+		col.find('textarea').css({'border': 'solid 2px ' + error_color});
+		col.find('select').css({'border': 'solid 2px ' + error_color});
+		setTimeout(function()
+		{
+			col.animate({'background-color': ''}, 150, "swing");
+		}, 100);
+	});
+	
+	return Math.abs(parseInt(col.position().top));
+}
+
+function getCSS(prop, fromClass) 
+{
+    var $inspector = $("<div>").css('display', 'none').addClass(fromClass);
+    $("body").append($inspector); // add to DOM, in order to read the CSS property
+    try {
+        return $inspector.css(prop);
+    } finally {
+        $inspector.remove(); // and remove from DOM
+    }
 }

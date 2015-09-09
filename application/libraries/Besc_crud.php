@@ -157,13 +157,13 @@ class Besc_crud
 				return array(	'bc_insert_url' => $this->base_url . 'insert',
 								'bc_list_url' => substr($this->base_url, 0, -1),
 								'bc_upload_url' => $this->base_url . 'imageupload',
-								'bc_validation_url' => $this->base_url . 'validation',
+								'bc_validation_url' => $this->base_url . 'validation/',
 					  		);
 			case 'edit':
 				return array(	'bc_edit_url' => $this->base_url . 'update/',
 								'bc_list_url' => substr($this->base_url, 0, -1),
 								'bc_upload_url' => $this->base_url . 'imageupload',
-								'bc_validation_url' => $this->base_url . 'validation',
+								'bc_validation_url' => $this->base_url . 'validation/',
 				);
 				break;
 			default:
@@ -251,16 +251,19 @@ class Besc_crud
 	
 	protected function validate()
 	{
-	    $this->ci->load->library('form_validation');
+	    //$this->ci->load->library('form_validation');
+	    $form_validation = new Besc_Form_validation();
+	    
+	    //var_dump($form_validation);
 	    
 	    $validate_array = array();
 	    $content = json_decode(file_get_contents('php://input'));
+	    $validate_columns = array();
 	    foreach($content as $column)
 	    {
-	        //echo $column->name;
-	        
 	        if(isset($this->db_columns[$column->name]['validation']) && $this->db_columns[$column->name]['validation'] != '')
 	        {
+                $validate_columns[] = $column->name;	            
     	        switch($column->type)
     	        {
     	            case 'text':
@@ -280,18 +283,32 @@ class Besc_crud
     	                break;
     	        }
     	        
-    	        $this->ci->form_validation->set_rules($column->name, isset($this->db_columns[$column->name]['display_as']) ? $this->db_columns[$column->name]['display_as'] : $this->db_columns[$column->name]['db_name'], $this->db_columns[$column->name]['validation']);
+    	        $rules = $form_validation->fix_is_unique_rule($this->db_primary_key, $this->state_info->first_parameter, $this->db_columns[$column->name]['validation']);
+    	        
+    	        $form_validation->set_rules($column->name, isset($this->db_columns[$column->name]['display_as']) ? $this->db_columns[$column->name]['display_as'] : $this->db_columns[$column->name]['db_name'], $rules);
 	        }
 	    }
 	    
-	    $this->ci->form_validation->set_data($validate_array);
-	    $this->ci->form_validation->set_message('required', '{field} is mandatory.');
-	    $this->ci->form_validation->set_error_delimiters('',';');
-	    if ($this->ci->form_validation->run() == FALSE)
+	    $form_validation->set_data($validate_array);
+	    $form_validation->set_message('required', '{field} is mandatory.');
+	    //$this->ci->form_validation->set_message('is_unique', 'This {field} in ' . $this->title . ' is already taken.');
+	    $form_validation->set_error_delimiters('', '');
+	    
+	    if ($form_validation->run() == FALSE)
 	    {
+	        $error_columns = array();
+	        foreach($validate_columns as $col)
+	        {
+	            if($form_validation->error($col) != '')
+	                $error_columns[] = array(
+	                    'name' => $col,
+	                    'error' => $form_validation->error($col),
+	                );
+	        }
+	        
 	        echo json_encode(array(
                 'success' => false,
-	            'errors'=> validation_errors(),
+	            'error_columns' => $error_columns,
 	        ));
 	    }
 	    else
@@ -301,6 +318,13 @@ class Besc_crud
 	            'message' => 'success validation',
             ));
 	    }
+	}
+	
+	public function bc_is_unique($str, $field)
+	{
+	    echo "bc_unique";
+	    $this->form_validation->set_message('bc_is_unique', 'This {field} in ' . $this->title . ' is already taken.');
+        return true;
 	}
 	
 	
@@ -828,6 +852,50 @@ class Besc_crud
 	{
 		return $this->ci->load->view('besc_crud/edit_elements/combobox', $col, true);
 	}
-	
+}
 
+require_once SYSDIR . '/libraries/Form_validation.php';
+
+class Besc_Form_validation extends CI_Form_validation
+{
+    function __construct()
+    {
+        parent::__construct();
+    }
+    
+    public function is_unique($str, $field) 
+    {
+    
+        if (substr_count($field, '.') == 3) {
+            list($table, $field, $id_field, $id_val) = explode('.', $field);
+            $query = $this->CI->db->limit(1)->where($field, $str)->where($id_field . ' != ', $id_val)->get($table);
+        } else {
+            list($table, $field) = explode('.', $field);
+            $query = $this->CI->db->limit(1)->get_where($table, array($field => $str));
+        }
+    
+        return $query->num_rows() === 0;
+    }    
+    
+    public function fix_is_unique_rule($pk, $id, $rules)
+    {
+        if($id != 'null')
+        {
+            $new_rule = $rules;
+            $rules = explode('|', $rules);
+            foreach($rules as $rule)
+            {
+                if(preg_match('/is_unique/', $rule))
+                {
+                    $replace = str_replace(']', ".$pk.$id]", $rule);
+                    
+                    $new_rule = str_replace($rule, $replace, $new_rule);
+                }
+            }
+        }   
+        else 
+            $new_rule = $rules; 
+            
+        return $new_rule;        
+    }
 }
