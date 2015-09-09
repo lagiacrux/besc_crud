@@ -1,6 +1,20 @@
 var bc_message_phasing = 200;
 var bc_message_id = 0;
 
+$(document).ready(function()
+{	
+	positionMessageContainer();
+});
+
+
+function positionMessageContainer()
+{
+	var parent = $('.bc_message_container').parent();
+	var width = parent.width() + parseInt(parent.css('margin-left')) + parseInt(parent.css('margin-right')) + parseInt(parent.css('padding-left')) + parseInt(parent.css('padding-right'));
+	$('.bc_message_container').css({'left': parent.position().left, 'top': parent.position().top, 'width': width});
+}
+
+
 function showMessage(type, message)
 {
 	switch(type)
@@ -13,10 +27,27 @@ function showMessage(type, message)
 			break;
 	}
 	
-	/*$('.bc_message_container').prepend('<div id="bc_message_' + bc_message_id + '" class="bc_message ' + bg_class + '">');
-	$('#bc_message_' + bc_message_id).animate({'line-height': 40}, bc_message_phasing, function()
+	$('.bc_message_container').prepend('<div bc_message_id="' + bc_message_id + '" class="bc_message ' + bg_class + '">' + message + '</div>');
+	$('.bc_message[bc_message_id="' + bc_message_id + '"]').animate({'line-height': 40}, bc_message_phasing, function()
 	{
-		
-	});*/
-	alert(message);
+		$(this).click(function()
+		{
+			$(this).animate({'line-height': 0}, bc_message_phasing, function()
+			{
+				$(this).remove();
+			});
+		});
+		setTimeoutMessageDisappear($(this))
+	});
+	bc_message_id++;
+	
+	//alert(message);
+}
+
+function setTimeoutMessageDisappear(message)
+{
+	setTimeout(function()
+	{
+		message.click();
+	}, 3000);
 }
