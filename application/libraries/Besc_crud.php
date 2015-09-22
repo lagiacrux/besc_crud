@@ -13,8 +13,13 @@ class Besc_crud
 	protected $db_where = "";
 	
 	protected $list_columns = array();
+	protected $filter_columns = array();
+	protected $filters = array(
+	    'select' => array(),
+	    'text' => array()
+	);
 	
-	protected $states = array('list', 'add', 'insert', 'edit', 'update', 'delete', 'refresh_list', 'imageupload', 'validation');
+	protected $states = array('list', 'add', 'insert', 'edit', 'update', 'delete', 'refresh_list', 'imageupload', 'validation', 'filter');
 	protected $state_info = array();
 	protected $base_url = "";
 	
@@ -26,6 +31,9 @@ class Besc_crud
 	protected $allow_add = true;
 	protected $allow_delete = true;
 	protected $allow_edit = true;
+	
+	protected $paging_perpage = 30;
+	protected $paging_offset = 0;
 	
 	protected $custom_upload = null;
 	
@@ -113,6 +121,12 @@ class Besc_crud
 	{
 	    $this->custom_upload = $custom_upload != null ? $custom_upload : $this->custom_upload;
 	    return $this->custom_upload;
+	}
+	
+	public function filter_columns($filter_columns = array())
+	{
+	    $this->filter_columns = $filter_columns != array() ? $filter_columns : $this->filter_columns;
+	    return $this->filter_columns;
 	}
 	
 	
@@ -213,6 +227,8 @@ class Besc_crud
 				break;
 				
 			case 'refresh_list':
+			    $this->paging_offset = $this->ci->input->get('page') * $this->paging_perpage;
+			    $this->filters = $this->getFiltersFromAjax($this->ci->input->get('filter'));
 				$this->render_list(true);
 				break;
 				
@@ -251,10 +267,7 @@ class Besc_crud
 	
 	protected function validate()
 	{
-	    //$this->ci->load->library('form_validation');
 	    $form_validation = new Besc_Form_validation();
-	    
-	    //var_dump($form_validation);
 	    
 	    $validate_array = array();
 	    $content = json_decode(file_get_contents('php://input'));
@@ -283,50 +296,50 @@ class Besc_crud
     	                break;
     	        }
     	        
+    	        
     	        $rules = $form_validation->fix_is_unique_rule($this->db_primary_key, $this->state_info->first_parameter, $this->db_columns[$column->name]['validation']);
     	        
     	        $form_validation->set_rules($column->name, isset($this->db_columns[$column->name]['display_as']) ? $this->db_columns[$column->name]['display_as'] : $this->db_columns[$column->name]['db_name'], $rules);
 	        }
 	    }
-	    
-	    $form_validation->set_data($validate_array);
-	    $form_validation->set_message('required', '{field} is mandatory.');
-	    //$this->ci->form_validation->set_message('is_unique', 'This {field} in ' . $this->title . ' is already taken.');
-	    $form_validation->set_error_delimiters('', '');
-	    
-	    if ($form_validation->run() == FALSE)
+	    if(count($validate_array) > 0)
 	    {
-	        $error_columns = array();
-	        foreach($validate_columns as $col)
+	        $form_validation->set_data($validate_array);
+	        $form_validation->set_message('required', '{field} is mandatory.');
+	        $form_validation->set_error_delimiters('', '');
+	         
+	        if ($form_validation->run() == FALSE)
 	        {
-	            if($form_validation->error($col) != '')
-	                $error_columns[] = array(
-	                    'name' => $col,
-	                    'error' => $form_validation->error($col),
-	                );
+	            $error_columns = array();
+	            foreach($validate_columns as $col)
+	            {
+	                if($form_validation->error($col) != '')
+	                    $error_columns[] = array(
+	                        'name' => $col,
+	                        'error' => $form_validation->error($col),
+	                    );
+	            }
+	             
+	            echo json_encode(array(
+	                'success' => false,
+	                'error_columns' => $error_columns,
+	            ));
 	        }
-	        
-	        echo json_encode(array(
-                'success' => false,
-	            'error_columns' => $error_columns,
-	        ));
+	        else
+	        {
+	            echo json_encode(array(
+	                'success' => true,
+	                'message' => 'success validation',
+	            ));
+	        }
 	    }
 	    else
-	    {
 	        echo json_encode(array(
 	            'success' => true,
 	            'message' => 'success validation',
-            ));
-	    }
+	            'dummy' => 'no_validation',
+	        ));
 	}
-	
-	public function bc_is_unique($str, $field)
-	{
-	    echo "bc_unique";
-	    $this->form_validation->set_message('bc_is_unique', 'This {field} in ' . $this->title . ' is already taken.');
-        return true;
-	}
-	
 	
 	protected function delete()
 	{
@@ -516,7 +529,6 @@ class Besc_crud
 	
 	public function getFullUrl() 
 	{
-	    
 	    return
 	    (isset($_SERVER['HTTPS']) ? 'https://' : 'http://').
 	    (isset($_SERVER['REMOTE_USER']) ? $_SERVER['REMOTE_USER'].'@' : '').
@@ -572,11 +584,11 @@ class Besc_crud
 		        
 		}
 		
-		$get = $this->ci->bc_model->get($this->db_table, $this->db_where);
+		$get = $this->getData();
 		
 		$rows = array();
 		
-		foreach($get->result_array() as $row)
+		foreach($get['data']->result_array() as $row)
 		{
 			$columns = array();
 			$columns['pk'] = $row[$this->db_primary_key];
@@ -633,18 +645,129 @@ class Besc_crud
 		$data['custom_button'] = $this->custom_buttons;
 		$data['custom_action'] = $this->custom_actions;
 		$data['bc_urls'] =  $this->get_urls();
+		$data['paging_and_filtering'] = $this->paging_and_filtering($get); 
+		
 		$data['ajax'] = $ajax;
 			
 		if(!$ajax)
 		{
-			
 			return $this->ci->load->view('besc_crud/table_view', $data, true);		
 		}
 		else
 		{
 			echo json_encode(array(	'success' => true,
-							 		'data' => $this->ci->load->view('besc_crud/table_view', $data, true)));
+							 		'data' => $this->ci->load->view('besc_crud/table_view', $data, true),
+			                        'paging_and_filtering' => $data['paging_and_filtering'],
+			));
 		}
+	}
+	
+	protected function getFiltersFromAjax($ajaxfilter)
+	{
+	    
+	    $select = array();
+	    $text = array();
+	    foreach($ajaxfilter as $filter)
+	    {
+	        switch($filter['type'])
+	        {
+	            case 'select':
+	                if($filter['value'] != 'null')
+	                {
+                        $select[$filter['name']] = $filter['value'];
+	                }
+	                break;
+	                
+	            case 'text':
+	                if($filter['value'] != '')
+	                {
+	                    $text[$filter['name']] = $filter['value'];
+	                }
+	                break;
+	        }
+	        
+	    }
+
+	    return array(
+	        'select' => $select,
+	        'text' => $text,
+	    );
+	}
+	
+	protected function getFiltersFromCookie()
+	{
+	    
+	}
+	
+	protected function getData()
+	{
+		return array(
+	        'data' => $this->ci->bc_model->get($this->db_table, $this->db_where, $this->paging_perpage, $this->paging_offset, $this->filters['select'], $this->filters['text']),
+	        'total' => $getTotal = $this->ci->bc_model->get_total($this->db_table, $this->db_where, $this->filters['select'], $this->filters['text'])->num_rows(), 
+	    );
+	}
+	
+	protected function paging_and_filtering($get)
+	{
+	    $data['paging'] = $this->paging($get);
+	    $data['filtering'] = $this->filtering($get);
+	    
+	    return $this->ci->load->view('besc_crud/paging_and_filtering', $data, true);
+	}
+	
+	protected function filtering($get)
+	{
+	    $html = '';
+	    foreach($this->filter_columns as $filter)
+	    {
+	        
+	        switch($this->db_columns[$filter]['type'])
+	        {
+	            case 'select':
+	                $data['filter_value'] = isset($this->filters['select'][$filter]) ? $this->filters['select'][$filter] : '';
+	                $data['options'] = $this->db_columns[$filter]['options'];
+	                $data['db_name'] = $this->db_columns[$filter]['db_name'];
+	                $data['display_as'] = $this->db_columns[$filter]['display_as']; 
+	                $html .= $this->ci->load->view('besc_crud/filters/select', $data, true);
+	                break;
+	            case 'text':
+	                $data['filter_value'] = isset($this->filters['text'][$filter]) ? $this->filters['text'][$filter] : '';
+	                $data['display_as'] = $this->db_columns[$filter]['display_as'];
+	                $data['db_name'] = $this->db_columns[$filter]['db_name'];
+	                $html .= $this->ci->load->view('besc_crud/filters/text', $data, true);
+	                break;
+	        }
+	    }
+	    
+	    return $html;
+	}
+	
+	protected function paging($get)
+	{
+	    
+	    $paging = array(
+		    'total' => $get['total'],
+		    'currentPage' => ($this->paging_offset / $this->paging_perpage),
+		    'totalPages' => ceil($get['total'] / $this->paging_perpage),
+		    'list_start' => ($this->paging_offset / $this->paging_perpage),
+		    'list_end' => ($this->paging_offset / $this->paging_perpage),
+		);
+	    
+	    $i = 1;
+	    while ($i < 3 && $paging['currentPage'] - $i >= 0)
+	    {
+	        $paging['list_start'] = $paging['currentPage'] - $i;
+	        $i++;
+	    }
+	    
+	    $i = 1;
+	    while ($i < 3 && $paging['currentPage'] + $i < $paging['totalPages'])
+	    {
+	        $paging['list_end'] = $paging['currentPage'] + $i;
+	        $i++;
+	    }
+	    
+	    return $paging;
 	}
 	
 	protected function render_edit()
@@ -888,7 +1011,6 @@ class Besc_Form_validation extends CI_Form_validation
                 if(preg_match('/is_unique/', $rule))
                 {
                     $replace = str_replace(']', ".$pk.$id]", $rule);
-                    
                     $new_rule = str_replace($rule, $replace, $new_rule);
                 }
             }

@@ -2,11 +2,32 @@
 
 class Besc_crud_model extends CI_Model  
 {
-	public function get($table, $where)
+	public function get($table, $where, $limit, $offset, $filter_select, $filter_text)
 	{
 	    if($where != '')
-	       $this->db->where($where);
-		return $this->db->get($table);
+            $this->db->where($where);
+	    
+	    if($filter_select != array())
+	        $this->db->where($filter_select);
+	    
+	    if($filter_text != array())
+	        $this->db->like($filter_text);
+	    
+		return $this->db->get($table, $limit, $offset);
+	}
+	
+	public function get_total($table, $where, $filter_select, $filter_text)
+	{
+	    if($where != '')
+	        $this->db->where($where);
+	    
+	    if($filter_select != array())
+	        $this->db->where($filter_select);
+	    
+	    if($filter_text != array())
+	        $this->db->like($filter_text);
+	    	    
+	    return $this->db->get($table);	    
 	}
 	
 	public function insert($table, $data)
