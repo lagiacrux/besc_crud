@@ -1,7 +1,5 @@
 var bc_and_go_back = false;
-var bc_message_phasing = 200;
-var bc_message_id = 0;
-var bc_message_lingering = 4000;
+
 
 $(document).ready(function()
 {	
@@ -15,13 +13,146 @@ $(document).ready(function()
 	bc_addMultilineListeners();
 	bc_addDatepickerListeners();
 	bc_addComboboxListeners();
-	bc_positionMessageContainer();
+	bc_positionMNRelationSearchbox();
+	bc_addFileListeners();
 });
 
 
 function bc_addComboboxListeners()
 {
-
+	(function( $ ) {
+	    $.widget( "custom.combobox", {
+	      _create: function() {
+	        this.wrapper = $( "<span>" )
+	          .addClass( "custom-combobox" )
+	          .insertAfter( this.element );
+	 
+	        this.element.hide();
+	        this._createAutocomplete();
+	        this._createShowAllButton();
+	      },
+	 
+	      _createAutocomplete: function() {
+	        var selected = this.element.children( ":selected" ),
+	          value = selected.val() ? selected.text() : "";
+	 
+	        this.input = $( "<input>" )
+	          .appendTo( this.wrapper )
+	          .val( value )
+	          .attr( "title", "" )
+	          .addClass( "custom-combobox-input ui-widget ui-widget-content ui-state-default ui-corner-left" )
+	          .autocomplete({
+	            delay: 0,
+	            minLength: 0,
+	            source: $.proxy( this, "_source" )
+	          })
+	          .tooltip({
+	            //tooltipClass: "ui-state-highlight"
+	          });
+	 
+	        this._on( this.input, {
+	          autocompleteselect: function( event, ui ) {
+	            ui.item.option.selected = true;
+	            this._trigger( "select", event, {
+	              item: ui.item.option
+	            });
+	          },
+	 
+	          autocompletechange: "_removeIfInvalid"
+	        });
+	      },
+	 
+	      _createShowAllButton: function() {
+	        var input = this.input,
+	          wasOpen = false;
+	 
+	        $( "<a>" )
+	          .attr( "tabIndex", -1 )
+	          .attr( "title", "Show All Items" )
+	          //.tooltip()
+	          .appendTo( this.wrapper )
+	          .button({
+	            icons: {
+	              primary: "ui-icon-triangle-1-s"
+	            },
+	            text: false
+	          })
+	          .removeClass( "ui-corner-all" )
+	          .addClass( "custom-combobox-toggle ui-corner-right" )
+	          .mousedown(function() {
+	            wasOpen = input.autocomplete( "widget" ).is( ":visible" );
+	          })
+	          .click(function() {
+	        	input.focus();
+	 
+	            // Close if already visible
+	            if ( wasOpen ) {
+	              return;
+	            }
+	 
+	            // Pass empty string as value to search for, displaying all results
+	            input.autocomplete( "search", "" );
+	            $('.ui-autocomplete').css({'width': 500, 'max-height': $(window).height() * 0.5, 'overflow-y': 'auto'});
+	          });
+	      },
+	 
+	      _source: function( request, response ) {
+	        var matcher = new RegExp( $.ui.autocomplete.escapeRegex(request.term), "i" );
+	        response( this.element.children( "option" ).map(function() {
+	          var text = $( this ).text();
+	          if ( this.value && ( !request.term || matcher.test(text) ) )
+	            return {
+	              label: text,
+	              value: text,
+	              option: this
+	            };
+	        }) );
+	        $('.ui-autocomplete').css({'width': 500, 'max-height': $(window).height() * 0.5, 'overflow-y': 'auto'});
+	      },
+	 
+	      _removeIfInvalid: function( event, ui ) {
+	 
+	        // Selected an item, nothing to do
+	        if ( ui.item ) {
+	          return;
+	        }
+	 
+	        // Search for a match (case-insensitive)
+	        var value = this.input.val(),
+	          valueLowerCase = value.toLowerCase(),
+	          valid = false;
+	        this.element.children( "option" ).each(function() {
+	          if ( $( this ).text().toLowerCase() === valueLowerCase ) {
+	            this.selected = valid = true;
+	            return false;
+	          }
+	        });
+	 
+	        // Found a match, nothing to do
+	        if ( valid ) {
+	          return;
+	        }
+	 
+	        // Remove invalid value
+	        this.input
+	          .val( "" )
+	          .attr( "title", value + " didn't match any item" )
+	          /*.tooltip( "open" )*/;
+	        this.element.val( '' );
+	        this._delay(function() {
+	          this.input.tooltip( "close" ).attr( "title", "" );
+	        }, 2500 );
+	        this.input.autocomplete( "instance" ).term = "";
+	      },
+	 
+	      _destroy: function() {
+	        this.wrapper.remove();
+	        this.element.show();
+	      }
+	    });
+	  })( jQuery );
+	 
+	$('.bc_combobox').combobox();
 }
 
 
@@ -53,8 +184,8 @@ function bc_bindEditListeners()
 	
 	$('.bc_update_and_go_back').click(function()
 	{
-		bc_edit();
 		bc_and_go_back = true;
+		bc_edit();
 	});
 	
 	$('.bc_update_cancel').click(function()
@@ -296,18 +427,28 @@ function bc_getData()
 	// date
 	$('.bc_edit_table').find('.bc_col_date').each(function()
 	{
-		/*var value = $(this).find('input').val();
-		if(value == "")
-			value = 0;*/
 		elements.push
 		( 
 			{
 				'name': $(this).find('input').attr('name').replace('col_', ''),
-				'value': $(this).find('input').val(),
+				'value': $(this).find('input').val() == '' ? 'null' : $(this).find('input').val(),
 				'type': 'date'
 			}
 		);
 	});		
+	
+	// combobox
+	$('.bc_edit_table').find('.bc_col_combobox').each(function()
+	{
+		elements.push
+		(
+			{
+				'name': $(this).find('select').attr('name').replace('col_', ''),
+				'value': $(this).find('select option:selected').attr('value'),
+				'type': 'combobox'		
+			}
+		);
+	});	
 	
 	return elements;		
 }
@@ -320,6 +461,8 @@ function bc_addDatepickerListeners()
 		$(this).find('input').datepicker(
 		{
 			dateFormat: $(this).find('input').attr('format'),
+			changeMonth: true,
+	        changeYear: true,
 		});
 		
 		$(this).find('.bc_col_date_calendar').click(function()
@@ -346,6 +489,27 @@ function bc_addMNRelationListeners()
 	{
 		bc_MNRelationClick($(this));
 	});
+	
+	$('.bc_m_n_filterbox input[type="text"]').keyup(function()
+	{
+		bc_MNRelationFilter($(this).val(), $(this).parent().attr('parent'));
+	});
+}
+
+function bc_MNRelationFilter(filter, parent)
+{
+	$('.bc_m_n_' + parent).each(function()
+	{
+		if($(this).text().toUpperCase().indexOf(filter.toUpperCase()) == -1)
+			$(this).hide();
+		else
+			$(this).show();
+	});
+}
+
+function bc_positionMNRelationSearchbox()
+{
+	$('.bc_m_n_filterbox input[type="text"]').css({'width': '-=18px'});
 }
 
 function bc_MNRelationClick(element)
@@ -376,6 +540,25 @@ function bc_MNRelationClick(element)
 }
 
 
+function bc_addFileListeners()
+{
+	$('.bc_col_file_upload_btn').click(function()
+	{
+		$(this).parent().find('input[type="file"]').click();
+	});
+	
+	$('.bc_col_file_file').change(function()
+	{
+		bc_uploadFile($(this).attr('id'), $(this).attr('uploadpath'), this.files);
+	});		
+	
+	$('.bc_col_file_delete').click(function()
+	{
+		bc_resetUpload($(this).parent());
+	});	
+}
+
+
 function bc_addImageListeners()
 {
 	$('.bc_col_image_upload_btn').click(function()
@@ -394,51 +577,46 @@ function bc_addImageListeners()
 	});
 }
 
-function bc_uploadFile(element, u)
+function bc_uploadFile(element, u, files)
 {
-	var file = document.getElementById(element).files[0];
+	var elem = $('#' + element);
+	var element_name = elem.attr('name').substr(4, elem.attr('name').length -9);
 	var uploadpath = u;
-	var reader = new FileReader();
-	var url;
-	reader.readAsDataURL (file);
-	reader.onload = function(event)
+	var xhr = new XMLHttpRequest();		
+	var fd = new FormData;
+	fd.append('data', files[0]);
+	fd.append('filename', files[0].name);
+	fd.append('element', element_name);
+	
+	xhr.addEventListener('load', function(e) 
 	{
-		var result = event.target.result;
-		var elem = $('#' + element);
-		var element_name = elem.attr('name').substr(4, elem.attr('name').length -9);
-		$.ajax(
+		var ret = $.parseJSON(this.responseText);
+		
+		if(ret.success)
 		{
-			url: bc_upload_url,
-			data: { filename: file.name, element: element_name, data: result },
-			method: 'POST',
-			success: function(data)
+			var col = $('#' + element).parent();
+			col.find('.bc_col_image_upload_btn').fadeOut(150, function()
 			{
-				var ret = $.parseJSON(data);
-				
-				if(ret.success)
-				{
-					var col = $('#' + element).parent();
-					col.find('.bc_col_image_upload_btn').fadeOut(150, function()
-					{
-						col.find('.bc_col_image_preview').attr('src', rootUrl + '/' + uploadpath + ret.filename);
-						col.find('a').attr('href', rootUrl + '/' + uploadpath + '/' + ret.filename);
-						col.find('.bc_col_image_preview').fadeIn(150);
-						col.find('.bc_col_image_delete').fadeIn(150);
-						col.find('.bc_col_fname').val(ret.filename);						
-					});
-					
-					if(col.attr('callback_after_upload') !== undefined)
-					{
-						window[col.attr('callback_after_upload')](ret.filename, uploadpath, element, result);
-					}
-				}
-				else
-				{
-					show_message('error', 'Error while uploading!');
-				}
+				col.find('.bc_col_image_preview').attr('src', rootUrl + '/' + uploadpath + ret.filename);
+				col.find('a').attr('href', rootUrl + '/' + uploadpath + '/' + ret.filename);
+				col.find('.bc_col_image_preview').fadeIn(150);
+				col.find('.bc_col_image_delete').fadeIn(150);
+				col.find('.bc_col_fname').val(ret.filename);						
+			});
+			
+			if(col.attr('callback_after_upload') !== undefined)
+			{
+				window[col.attr('callback_after_upload')](ret.filename, uploadpath, element, result);
 			}
-		});			
-	};
+		}
+		else
+		{
+			show_message('error', 'Error while uploading!');
+		}
+    });
+	
+	xhr.open('post', bc_upload_url);
+	xhr.send(fd);
 }
 
 function bc_resetUpload(col)
@@ -449,7 +627,7 @@ function bc_resetUpload(col)
 	{
 		col.find('.bc_col_image_preview').attr('src', '');
 		col.find('a').attr('src', '');
-		col.find('.bc_col_image_upload_btn').fadeIn(150);
+		col.find('.bc_col_file_upload_btn').fadeIn(150);
 	});
 }
 
@@ -498,7 +676,6 @@ function bc_validate_errors(data)
 			scroll_to = new_scroll_to;
 	}
 	
-	console.log(scroll_to);
 	$(".bc_edit_table").parent().scrollTop(scroll_to);
 }
 
@@ -532,40 +709,6 @@ function getCSS(prop, fromClass)
 }
 
 
-function bc_positionMessageContainer()
-{
-	var parent = $('.bc_message_container').parent();
-	var width = parent.width() + parseInt(parent.css('margin-left')) + parseInt(parent.css('margin-right')) + parseInt(parent.css('padding-left')) + parseInt(parent.css('padding-right'));
-	$('.bc_message_container').css({'left': parent.position().left, 'top': parent.position().top, 'width': width});
-}
-
-
-function showMessage(type, message)
-{
-	switch(type)
-	{
-		case 'error':
-			var bg_class = "bc_message_error";
-			break;
-		case 'success':
-			var bg_class = "bc_message_success";
-			break;
-	}
-	
-	$('.bc_message_container').prepend('<div bc_message_id="' + bc_message_id + '" class="bc_message ' + bg_class + '">' + message + '</div>');
-	$('.bc_message[bc_message_id="' + bc_message_id + '"]').animate({'line-height': 40}, bc_message_phasing, function()
-	{
-		$(this).click(function()
-		{
-			$(this).animate({'line-height': 0}, bc_message_phasing, function()
-			{
-				$(this).remove();
-			});
-		});
-		setTimeoutMessageDisappear($(this))
-	});
-	bc_message_id++;
-}
 
 function setTimeoutMessageDisappear(message)
 {

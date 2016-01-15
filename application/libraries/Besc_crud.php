@@ -11,6 +11,8 @@ class Besc_crud
 	protected $db_primary_key = "";
 	protected $db_columns = array();
 	protected $db_where = "";
+	protected $db_order_by_field = '';
+	protected $db_order_by_direction = '';
 	
 	protected $list_columns = array();
 	protected $filter_columns = array();
@@ -18,8 +20,9 @@ class Besc_crud
 	    'select' => array(),
 	    'text' => array()
 	);
+	protected $ordering = array();
 	
-	protected $states = array('list', 'add', 'insert', 'edit', 'update', 'delete', 'refresh_list', 'imageupload', 'validation', 'filter');
+	protected $states = array('list', 'add', 'insert', 'edit', 'update', 'delete', 'refresh_list', 'imageupload', 'validation', 'filter', 'ordering', 'save_ordering');
 	protected $state_info = array();
 	protected $base_url = "";
 	
@@ -99,6 +102,24 @@ class Besc_crud
 	    return $this->db_where;	    
 	}
 	
+	public function order_by_field($order_by_string = "")
+	{
+	    $this->db_order_by_field = $order_by_string != "" ? $order_by_string : $this->db_order_by_field;
+	    return $this->db_order_by_field;	    
+	}
+	
+	public function order_by_direction($order_by_string = "")
+	{
+	    $this->db_order_by_direction = $order_by_string != "" ? $order_by_string : $this->db_order_by_direction;
+	    return $this->db_order_by_direction;
+	}
+	
+	public function ordering($ordering = array())
+	{
+	    $this->ordering = $ordering != "" ? $ordering : $this->ordering;
+	    return $this->ordering;	    
+	}
+	
 	public function unset_add()
 	{
 	    $this->allow_add = false;
@@ -130,7 +151,7 @@ class Besc_crud
 	}
 	
 	
-	protected function get_state_info_from_url()
+	public function get_state_info_from_url()
 	{
 		$segment_position = count($this->ci->uri->segments) + 1;
 		$operation = 'list';
@@ -161,9 +182,11 @@ class Besc_crud
 		switch($this->state_info->operation)
 		{
 			case 'list':
+			case 'refresh_list':
 				return array(	'bc_delete_url' => $this->base_url . 'delete/',
 								'bc_list_url' => substr($this->base_url, 0, -1),
-								'bc_refresh_url' => $this->base_url . 'refresh_list/'
+								'bc_refresh_url' => $this->base_url . 'refresh_list/',
+								'bc_edit_url' => $this->base_url . 'edit/',
 					  		);
 				break;
 			case 'add':
@@ -180,6 +203,13 @@ class Besc_crud
 								'bc_validation_url' => $this->base_url . 'validation/',
 				);
 				break;
+			case 'ordering':
+			    return array(	
+                    'bc_list_url' => substr($this->base_url, 0, -1),
+			        'bc_ordering_url' => $this->base_url . 'save_ordering/',
+			    );
+			    break;
+			    break;
 			default:
 				return array();
 		}
@@ -258,6 +288,16 @@ class Besc_crud
 			    
 			case 'validation':
 			    $this->validate();
+			    break;
+			    
+			case 'ordering':
+			    if($this->ordering != array())
+                    return $this->render_ordering();
+			    break;
+			    
+			case 'save_ordering':
+			    if($this->ordering != array())
+			        $this->save_ordering();
 			    break;
 		}
 		die();
@@ -372,6 +412,7 @@ class Besc_crud
 				case 'image':
 				case 'multiline':
 				case 'select':
+				case 'combobox':
 					$col[$column->name] = $column->value;
 					break;
 				case 'm_n_relation':
@@ -435,6 +476,7 @@ class Besc_crud
 				case 'image':
 				case 'multiline':
 				case 'select':
+				case 'combobox':
 					$col[$column->name] = $column->value;
 					break;
 				case 'm_n_relation':
@@ -444,7 +486,7 @@ class Besc_crud
 				    $col[$column->name] = prep_url($column->value);
 				    break;
 			    case 'date':
-			        $col[$column->name] = date('Y-m-d H:i:s', strtotime($column->value));
+			        $col[$column->name] =  $column->value == 'null' ? NULL : date('Y-m-d H:i:s', strtotime($column->value));
 			        break;
 			}
 		}
@@ -496,20 +538,14 @@ class Besc_crud
 	    else
 	    {
 	        $upload_path = $this->db_columns[$col_name]['uploadpath'];
-	        
 	        if(substr($upload_path, -1) != '/')
 	            $upload_path .= '/';
 	        
 	        $rnd = $this->rand_string(12);
-	        $data = explode(',', $_POST['data']);
-	        
 	        $ext = pathinfo($filename, PATHINFO_EXTENSION);
-	        
 	        $serverFile = time() . "_" . $rnd . "." . $ext;
-	        $fp = fopen(getcwd() . '/' . $upload_path . $serverFile, 'w');
 	         
-	        fwrite($fp, base64_decode($data[1]));
-	        fclose($fp);
+	        $error = move_uploaded_file($_FILES['data']['tmp_name'], getcwd() . "/$upload_path/$serverFile");
 	    } 
 
         echo json_encode(array('success' => true,
@@ -581,7 +617,6 @@ class Besc_crud
 		    
 		    if($show_in_list)
 		        $data['headers'][] = isset($column['display_as']) ? $column['display_as'] : $key;
-		        
 		}
 		
 		$get = $this->getData();
@@ -645,7 +680,8 @@ class Besc_crud
 		$data['custom_button'] = $this->custom_buttons;
 		$data['custom_action'] = $this->custom_actions;
 		$data['bc_urls'] =  $this->get_urls();
-		$data['paging_and_filtering'] = $this->paging_and_filtering($get); 
+		$data['paging_and_filtering'] = $this->paging_and_filtering($get);
+		$data['ordering'] = $this->ordering; 
 		
 		$data['ajax'] = $ajax;
 			
@@ -667,26 +703,36 @@ class Besc_crud
 	    
 	    $select = array();
 	    $text = array();
-	    foreach($ajaxfilter as $filter)
+	    
+	    if($ajaxfilter != null)
 	    {
-	        switch($filter['type'])
-	        {
-	            case 'select':
-	                if($filter['value'] != 'null')
-	                {
-                        $select[$filter['name']] = $filter['value'];
-	                }
-	                break;
-	                
-	            case 'text':
-	                if($filter['value'] != '')
-	                {
-	                    $text[$filter['name']] = $filter['value'];
-	                }
-	                break;
-	        }
-	        
+	        foreach($ajaxfilter as $filter)
+    	    {
+    	        switch($filter['type'])
+    	        {
+    	            case 'select':
+    	                if($filter['value'] != 'null')
+    	                {
+                            $select[$filter['name']] = $filter['value'];
+    	                }
+    	                break;
+    	                
+    	            case 'text':
+    	                if($filter['value'] != '')
+    	                {
+    	                    $text[$filter['name']] = $filter['value'];
+    	                }
+    	                break;
+    	                
+    	            /*case 'm_n_relation':
+    	                $col = $this->db_columns[$filter['name']];
+    	                $this->ci->bc_model->get_m_n_relation_n_values($col['table_n'], $col['table_n_pk'], )
+    	                break;*/
+    	        }
+    	        
+    	    }
 	    }
+	    
 
 	    return array(
 	        'select' => $select,
@@ -702,7 +748,7 @@ class Besc_crud
 	protected function getData()
 	{
 		return array(
-	        'data' => $this->ci->bc_model->get($this->db_table, $this->db_where, $this->paging_perpage, $this->paging_offset, $this->filters['select'], $this->filters['text']),
+	        'data' => $this->ci->bc_model->get($this->db_table, $this->db_where, $this->paging_perpage, $this->paging_offset, $this->filters['select'], $this->filters['text'], $this->db_order_by_field, $this->db_order_by_direction),
 	        'total' => $getTotal = $this->ci->bc_model->get_total($this->db_table, $this->db_where, $this->filters['select'], $this->filters['text'])->num_rows(), 
 	    );
 	}
@@ -728,14 +774,24 @@ class Besc_crud
 	                $data['options'] = $this->db_columns[$filter]['options'];
 	                $data['db_name'] = $this->db_columns[$filter]['db_name'];
 	                $data['display_as'] = $this->db_columns[$filter]['display_as']; 
+	                $data['type'] = $this->db_columns[$filter]['type'];
 	                $html .= $this->ci->load->view('besc_crud/filters/select', $data, true);
 	                break;
-	            case 'text':
+	            case 'm_n_relation':
+	                $data['filter_value'] = isset($this->filters['text'][$filter]) ? $this->filters['text'][$filter] : '';
+	                $data['display_as'] = $this->db_columns[$filter]['display_as'];
+	                $data['db_name'] = $filter;
+	                $data['type'] = $this->db_columns[$filter]['type'];
+	                $html .= $this->ci->load->view('besc_crud/filters/text', $data, true);
+	                break;
+                case 'text':
 	                $data['filter_value'] = isset($this->filters['text'][$filter]) ? $this->filters['text'][$filter] : '';
 	                $data['display_as'] = $this->db_columns[$filter]['display_as'];
 	                $data['db_name'] = $this->db_columns[$filter]['db_name'];
+	                $data['type'] = $this->db_columns[$filter]['type'];
 	                $html .= $this->ci->load->view('besc_crud/filters/text', $data, true);
-	                break;
+	                break;    
+	            
 	        }
 	    }
 	    
@@ -785,6 +841,12 @@ class Besc_crud
 		}
 		
 		$i = 0;
+		
+		if($this->state_info->first_parameter != null)
+		    $data['edit_or_add'] = BC_EDIT;
+		else
+		    $data['edit_or_add'] = BC_ADD;
+		
 		foreach($this->db_columns as $key => $col)
 		{
 			$col['num_row'] = $i;
@@ -822,11 +884,16 @@ class Besc_crud
 				    $columns[$i] = $this->edit_url($col);
 				    break;
 				case 'date':
-				    $columns[$i] = $this->edit_date($col);
+				    $columns[$i] = $this->edit_date($col, $data['edit_or_add']);
 				    break;
 			    case 'combobox':
 			        $columns[$i] = $this->edit_combobox($col);
 			        break;
+                case 'file':
+                    if(!isset($col['js_callback_after_upload']))
+                        $col['js_callback_after_upload'] = "";
+                    $columns[$i] = $this->edit_image($col);
+                    break;
 			}
 			$i++;
 		}
@@ -835,10 +902,7 @@ class Besc_crud
 		
 		$data['columns'] = $columns;
 		$data['title'] = $this->title;
-		if($this->state_info->first_parameter != null)
-			$data['edit_or_add'] = BC_EDIT;
-		else
-			$data['edit_or_add'] = BC_ADD;
+		
 		
 		$data['bc_urls'] = $this->get_urls();
 		
@@ -956,7 +1020,7 @@ class Besc_crud
 		if(count($selected) <= 0)
 		    $selected[] = -1;
 		
-		$col['avail'] = $this->ci->bc_model->get_m_n_relation_n_values($col['table_n'], $col['table_n_pk'], $selected);
+		$col['avail'] = $this->ci->bc_model->get_m_n_relation_n_values($col['table_n'], $col['table_n_pk'], $selected, $col['table_n_value']);
 
 		return $this->ci->load->view('besc_crud/edit_elements/m_n_relation', $col, true);
 	}	
@@ -966,14 +1030,112 @@ class Besc_crud
 	    return $this->ci->load->view('besc_crud/edit_elements/url', $col, true);
 	}	
 	
-	protected function edit_date($col)
+	protected function edit_date($col, $add_or_edit)
 	{
+	    $col['corr_value'] = '';
+	    if($add_or_edit == BC_ADD)
+	    {
+	        if(isset($col['defaultvalue']))
+	        {
+	            $col['corr_value'] = $col['defaultvalue'];
+	        }
+	    }
+	    else
+	    {
+	        if(isset($col['value']) && $col['value'] != "" && $col['value'] != 1 && $col['value'] != "0000-00-00 00:00:00" && $col['value'] != null && $col['value'] != '1970-01-01 01:00:00')
+	        {
+	            $col['corr_value'] = $col['value'];
+	        }
+	    }
+	    
 	    return $this->ci->load->view('besc_crud/edit_elements/date', $col, true);
 	}
 	
     protected function edit_combobox($col)
 	{
 		return $this->ci->load->view('besc_crud/edit_elements/combobox', $col, true);
+	}
+	
+	protected function edit_file($col)
+	{
+	    if(substr($col['uploadpath'], -1) != '/')
+	        $col['uploadpath'] .= '/';
+	
+	    return $this->ci->load->view('besc_crud/edit_elements/file', $col, true);
+	}
+	
+	
+	protected function render_ordering()
+	{
+	    $data['title'] = $this->title;
+	    $data['bc_urls'] = $this->get_urls();
+	    $data['items'] = array();
+	    
+	    $value_col = $this->db_columns[$this->ordering['value']];
+	    
+	    foreach($this->ci->bc_model->get_ordering($this->db_table, $this->db_where, $this->ordering['ordering'])->result_array() as $column)
+	    {
+	        switch($value_col['type'])
+	        {
+    	        case 'select':
+                case 'combobox':
+                    foreach($value_col['options'] as $col)
+                    {
+                        if($col['key'] == $column[$this->ordering['value']])
+                        {
+                            $val = $col['value'];
+                            break;
+                        }
+                    }
+                    break;
+                case 'text':
+                case 'url':
+                case 'date':
+                case 'multiline':
+                    $val = $column[$this->ordering['value']];
+                    break;
+                default:
+                    $val = null;
+                    break;
+            }
+            
+            if($val != null)
+            {
+                $data['items'][] = array(
+                    'id' => $column[$this->db_primary_key],
+                    'value' => $val,
+                    'ordering' => $column[$this->ordering['ordering']],
+                );
+            }
+	    } 
+	    
+	    return $this->ci->load->view('besc_crud/ordering_view', $data, true);
+	}
+	
+	protected function save_ordering()
+	{
+	    $content = json_decode(file_get_contents('php://input'));
+	    $batch = array();
+	    foreach($content as $column)
+	    {
+	        $batch[] = array(
+                $this->db_primary_key => $column->id,
+	            $this->ordering['ordering'] => $column->ordering, 
+	        );
+	    }
+	    
+	    if($this->ci->bc_model->save_ordering($this->db_table, $batch, $this->db_primary_key))
+		{
+		    $result['success'] = true;
+		    $result['message'] = $this->title . ' sorting successfully updated.';
+		}
+		else
+		{
+		    $result['success'] = false;
+		    $result['message'] = 'Error while updating ' . $this->title . '.';
+		}
+		
+		echo json_encode($result);
 	}
 }
 

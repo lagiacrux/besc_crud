@@ -2,7 +2,7 @@
 
 class Besc_crud_model extends CI_Model  
 {
-	public function get($table, $where, $limit, $offset, $filter_select, $filter_text)
+	public function get($table, $where, $limit, $offset, $filter_select, $filter_text, $order_by_col, $order_by_direction)
 	{
 	    if($where != '')
             $this->db->where($where);
@@ -13,7 +13,20 @@ class Besc_crud_model extends CI_Model
 	    if($filter_text != array())
 	        $this->db->like($filter_text);
 	    
+	    if($order_by_col != '' && $order_by_direction != '')
+	        $this->db->order_by($order_by_col, $order_by_direction);
+	    
 		return $this->db->get($table, $limit, $offset);
+	}
+	
+	public function get_ordering($table, $where, $ordering)
+	{
+	    if($where != '')
+	        $this->db->where($where);
+	    
+	    $this->db->order_by($ordering, 'asc');
+	    
+	    return $this->db->get($table);
 	}
 	
 	public function get_total($table, $where, $filter_select, $filter_text)
@@ -85,12 +98,14 @@ class Besc_crud_model extends CI_Model
 		$this->db->select("$table_mn.$table_mn_col_n, $table_n.$table_n_value");
 		$this->db->where($table_mn_col_m, $table_m_value);
 		$this->db->join($table_n, $table_n . '.' . $table_n_pk .'=' . $table_mn . '.' . $table_mn_col_n);
+		$this->db->order_by("$table_n.$table_n_value", 'asc');
 		return $this->db->get($table_mn);
 	}
 	
-	public function get_m_n_relation_n_values($table_n, $table_n_pk, $already_selected)
+	public function get_m_n_relation_n_values($table_n, $table_n_pk, $already_selected, $table_n_value)
 	{
 		$this->db->where_not_in($table_n_pk, $already_selected);
+		$this->db->order_by($table_n_value, 'asc');
 		return $this->db->get($table_n);
 	}
 	
@@ -112,7 +127,6 @@ class Besc_crud_model extends CI_Model
 	}
 	
 	
-	
 	public function get_image_gallery_items($table, $fk, $key)
 	{
 	    $this->db->trans_start();
@@ -123,6 +137,14 @@ class Besc_crud_model extends CI_Model
 	        return false;
 	    else 
 	        return $get;
+	}
+	
+	function save_ordering($table, $batchdata, $key)
+	{
+	    $this->db->trans_start();
+	    $this->db->update_batch($table, $batchdata, $key);
+	    $this->db->trans_complete();
+	    return $this->db->trans_status() === false ? false : true;
 	}
 }
 ?>
