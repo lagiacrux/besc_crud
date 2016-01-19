@@ -2,16 +2,26 @@
 
 class Besc_crud_model extends CI_Model  
 {
-	public function get($table, $where, $limit, $offset, $filter_select, $filter_text, $order_by_col, $order_by_direction)
+	public function get($table, $where, $limit, $offset, $filters, $order_by_col, $order_by_direction)
 	{
+	    $this->db->select($table . '.*');
+	    
 	    if($where != '')
             $this->db->where($where);
 	    
-	    if($filter_select != array())
-	        $this->db->where($filter_select);
+	    if($filters['select'] != array())
+	        $this->db->where($filters['select']);
 	    
-	    if($filter_text != array())
-	        $this->db->like($filter_text);
+	    if($filters['text'] != array())
+	        $this->db->like($filters['text']);
+	    
+	    if($filters['m_n_relation'] != array())
+	    {
+	        foreach($filters['m_n_relation'] as $key => $value)
+	        {
+	            $this->db->where_in($key, $value);
+	        }
+	    }
 	    
 	    if($order_by_col != '' && $order_by_direction != '')
 	        $this->db->order_by($order_by_col, $order_by_direction);
@@ -29,16 +39,24 @@ class Besc_crud_model extends CI_Model
 	    return $this->db->get($table);
 	}
 	
-	public function get_total($table, $where, $filter_select, $filter_text)
+	public function get_total($table, $where, $filters)
 	{
 	    if($where != '')
 	        $this->db->where($where);
 	    
-	    if($filter_select != array())
-	        $this->db->where($filter_select);
+	    if($filters['select'] != array())
+	        $this->db->where($filters['select']);
 	    
-	    if($filter_text != array())
-	        $this->db->like($filter_text);
+	    if($filters['text'] != array())
+	        $this->db->like($filters['text']);
+	    
+	    if($filters['m_n_relation'] != array())
+	    {
+	        foreach($filters['m_n_relation'] as $key => $value)
+	        {
+	            $this->db->where_in($key, $value);
+	        }
+	    }
 	    	    
 	    return $this->db->get($table);	    
 	}
@@ -82,7 +100,13 @@ class Besc_crud_model extends CI_Model
 	            return true;
 	}	
 	
-	
+	public function get_m_n_relation_filter_ids($table_mn, $table_mn_col_m, $table_mn_col_n, $table_m_value, $table_n, $table_n_value, $table_n_pk, $filter)
+	{
+	    $this->db->select($table_mn . '.' . $table_mn_col_m);
+		$this->db->join($table_n, $table_n . '.' . $table_n_pk . '=' . $table_mn . '.' . $table_mn_col_n);
+        $this->db->like($table_n . '.' . $table_n_value, $filter);
+	    return $this->db->get($table_mn);
+	}
 	
 	public function get_m_n_relation($table_mn, $table_mn_col_m, $table_mn_col_n, $table_m_value, $table_n, $table_n_value, $table_n_pk)
 	{
@@ -108,6 +132,8 @@ class Besc_crud_model extends CI_Model
 		$this->db->order_by($table_n_value, 'asc');
 		return $this->db->get($table_n);
 	}
+	
+	
 	
 	public function delete_m_n_relationByID($table_mn, $table_mn_col_m, $table_mn_pk)
 	{

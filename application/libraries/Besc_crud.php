@@ -18,7 +18,8 @@ class Besc_crud
 	protected $filter_columns = array();
 	protected $filters = array(
 	    'select' => array(),
-	    'text' => array()
+	    'text' => array(),
+	    'm_n_relation' => array(),
 	);
 	protected $ordering = array();
 	
@@ -703,6 +704,7 @@ class Besc_crud
 	    
 	    $select = array();
 	    $text = array();
+	    $m_n = array();
 	    
 	    if($ajaxfilter != null)
 	    {
@@ -724,19 +726,29 @@ class Besc_crud
     	                }
     	                break;
     	                
-    	            /*case 'm_n_relation':
-    	                $col = $this->db_columns[$filter['name']];
-    	                $this->ci->bc_model->get_m_n_relation_n_values($col['table_n'], $col['table_n_pk'], )
-    	                break;*/
+    	            case 'm_n_relation':
+    	                if($filter['value'] != '')
+    	                {
+                            $col = $this->db_columns[$filter['name']];
+                            
+                            $elements = array(); 
+                            foreach($this->ci->bc_model->get_m_n_relation_filter_ids($col['table_mn'], $col['table_mn_col_m'], $col['table_mn_col_n'], $this->db_primary_key, $col['table_n'], $col['table_n_value'], $col['table_n_pk'], $filter['value'])->result_array() as $row)
+                            {
+                                $elements[] = $row[$col['table_mn_col_m']];
+                            }
+                            $m_n[$this->db_primary_key] = $elements;
+    	                }
+    	                break;
     	        }
-    	        
     	    }
 	    }
 	    
+	    //var_dump($m_n);
 
 	    return array(
 	        'select' => $select,
 	        'text' => $text,
+	        'm_n_relation' => $m_n,
 	    );
 	}
 	
@@ -747,9 +759,10 @@ class Besc_crud
 	
 	protected function getData()
 	{
+	    //var_dump($this->filters);
 		return array(
-	        'data' => $this->ci->bc_model->get($this->db_table, $this->db_where, $this->paging_perpage, $this->paging_offset, $this->filters['select'], $this->filters['text'], $this->db_order_by_field, $this->db_order_by_direction),
-	        'total' => $getTotal = $this->ci->bc_model->get_total($this->db_table, $this->db_where, $this->filters['select'], $this->filters['text'])->num_rows(), 
+	        'data' => $this->ci->bc_model->get($this->db_table, $this->db_where, $this->paging_perpage, $this->paging_offset, $this->filters, $this->db_order_by_field, $this->db_order_by_direction),
+	        'total' => $getTotal = $this->ci->bc_model->get_total($this->db_table, $this->db_where, $this->filters)->num_rows(), 
 	    );
 	}
 	

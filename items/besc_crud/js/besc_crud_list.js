@@ -195,12 +195,13 @@ function getFilterSettings()
 				break;
 				
 			case 'text':
+			case 'm_n_relation':
 				bc_filter.push
 				(
 					{
 						'name': $(this).find('input').attr('name'),
 						'value': $(this).find('input').val(),
-						'type': 'text'		
+						'type': $(this).attr('type')		
 					}
 				);
 				break;
