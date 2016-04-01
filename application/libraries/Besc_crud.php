@@ -23,7 +23,7 @@ class Besc_crud
 	);
 	protected $ordering = array();
 	
-	protected $states = array('list', 'add', 'insert', 'edit', 'update', 'delete', 'refresh_list', 'imageupload', 'validation', 'filter', 'ordering', 'save_ordering');
+	protected $states = array('list', 'add', 'insert', 'edit', 'update', 'delete', 'refresh_list', 'imageupload', 'validation', 'filter', 'ordering', 'save_ordering', 'imagecrop');
 	protected $state_info = array();
 	protected $base_url = "";
 	
@@ -196,12 +196,14 @@ class Besc_crud
 								'bc_list_url' => substr($this->base_url, 0, -1),
 								'bc_upload_url' => $this->base_url . 'imageupload',
 								'bc_validation_url' => $this->base_url . 'validation/',
+								'bc_crop_url' => $this->base_url . 'imagecrop',
 					  		);
 			case 'edit':
 				return array(	'bc_edit_url' => $this->base_url . 'update/',
 								'bc_list_url' => substr($this->base_url, 0, -1),
 								'bc_upload_url' => $this->base_url . 'imageupload',
 								'bc_validation_url' => $this->base_url . 'validation/',
+								'bc_crop_url' => $this->base_url . 'imagecrop',
 				);
 				break;
 			case 'ordering':
@@ -300,6 +302,10 @@ class Besc_crud
 			    if($this->ordering != array())
 			        $this->save_ordering();
 			    break;
+			    
+			case 'imagecrop':
+			    $this->imagecrop();
+			    break;    
 		}
 		die();
 
@@ -325,6 +331,8 @@ class Besc_crud
     	            case 'image':
     	            case 'multiline':
     	            case 'select':
+    	            case 'combobox':
+    	            case 'colorpicker':
     	                $validate_array[$column->name] = $column->value;
     	                break;
     	            case 'm_n_relation':
@@ -335,8 +343,11 @@ class Besc_crud
     	            case 'date':
     	                $validate_array[$column->name] = date('Y-m-d', strtotime($column->value));
     	                break;
+    	            case 'colorpicker':
+    	                //$this->db_columns[$column->name]['validation'] .= '|/#([a-fA-F0-9]{3}){1,2}\b/';
+    	                $validate_array[$column->name] = $column->value;
+    	                break;
     	        }
-    	        
     	        
     	        $rules = $form_validation->fix_is_unique_rule($this->db_primary_key, $this->state_info->first_parameter, $this->db_columns[$column->name]['validation']);
     	        
@@ -413,7 +424,9 @@ class Besc_crud
 				case 'image':
 				case 'multiline':
 				case 'select':
+			    case 'ckeditor':
 				case 'combobox':
+				case 'colorpicker':
 					$col[$column->name] = $column->value;
 					break;
 				case 'm_n_relation':
@@ -477,7 +490,9 @@ class Besc_crud
 				case 'image':
 				case 'multiline':
 				case 'select':
+			    case 'ckeditor':
 				case 'combobox':
+				case 'colorpicker':
 					$col[$column->name] = $column->value;
 					break;
 				case 'm_n_relation':
@@ -529,8 +544,8 @@ class Besc_crud
 	
 	protected function imageupload()
 	{
-	    $filename = $_POST['filename'];
-	    $col_name = $_POST['element'];
+	    $filename = $this->ci->input->post('filename');
+	    $col_name = $this->ci->input->post('element');
 	    
 	    if(isset($this->custom_upload[$col_name]))
 	    {
@@ -549,8 +564,60 @@ class Besc_crud
 	        $error = move_uploaded_file($_FILES['data']['tmp_name'], getcwd() . "/$upload_path/$serverFile");
 	    } 
 
+	    $crop = isset($this->db_columns[$col_name]['crop']) ? $this->db_columns[$col_name]['crop'] : null;
+	    
+	    
         echo json_encode(array('success' => true,
-                               'filename' => $serverFile));
+                               'filename' => $serverFile,
+                               'crop' => $crop,
+        ));
+	}
+	
+	protected function imagecrop()
+	{
+	    $filename = $this->ci->input->post('filename');
+	    $col = $this->ci->input->post('col');
+	    $x1 = $this->ci->input->post('x1');
+	    $y1 = $this->ci->input->post('y1');
+	    $x2 = $this->ci->input->post('x2');
+	    $y2 = $this->ci->input->post('y2');
+	    
+	    $uploadpath = $this->db_columns[$col]['uploadpath'];
+	    $cropdata = $this->db_columns[$col]['crop'];
+	    
+	    if(substr($uploadpath, -1) != '/')
+	        $uploadpath .= '/';
+	     
+	    $width = $destWidth = $x2-$x1;
+	    $height = $destHeight = $y2-$y1;
+	    
+	    if($destWidth > $cropdata['maxWidth'])
+	        $destWidth = $cropdata['maxWidth'];
+	    
+	    if($destHeight > $cropdata['maxHeight'])
+	        $destHeight = $cropdata['maxHeight'];
+	    
+	    $new_img = imagecreatetruecolor( $destWidth, $destHeight );
+	    $col=imagecolorallocatealpha($new_img,255,255,255,127);
+	    imagefill($new_img, 0, 0, $col);
+	    
+	    $ext = pathinfo($filename, PATHINFO_EXTENSION);
+	    
+	    switch($ext)
+	    {
+	        case 'png':
+	            $img = imagecreatefrompng(getcwd() . '/' . $uploadpath . $filename);
+	            break;
+	        case 'jpg':
+	        case 'jpeg':
+	            $img = imagecreatefromjpeg(getcwd() . '/' . $uploadpath . $filename);
+	            break;
+	    }
+	    
+	    imagecopyresampled($new_img, $img, 0, 0, $x1, $y1, $destWidth, $destHeight, $width, $height);
+	    imagepng($new_img, getcwd() . '/' . "$uploadpath/$filename");
+	    
+	    echo json_encode(array('success' => true));
 	}
 	
 	function rand_string($length)
@@ -616,6 +683,9 @@ class Besc_crud
 		    if($this->list_columns != array())
 		        $show_in_list = in_array($key, $this->list_columns);
 		    
+		    if($column['type'] == 'hidden')
+		        $show_in_list = false;
+		    
 		    if($show_in_list)
 		        $data['headers'][] = isset($column['display_as']) ? $column['display_as'] : $key;
 		}
@@ -641,6 +711,7 @@ class Besc_crud
     				switch($column['type'])
     				{
     					case 'hidden':
+    					    break;
     					case 'text':
     						$columns[$key] = $this->list_text($row, $column);
     						break;
@@ -660,6 +731,7 @@ class Besc_crud
     					    $columns[$key] = $this->list_image_gallery($row, $column);
     					    break;
     					case 'multiline':
+    					case 'ckeditor':
     					    $columns[$key] = $this->list_multiline($row, $column);
     					    break;
     					case 'date':
@@ -667,7 +739,12 @@ class Besc_crud
     					    break;
 					    case 'combobox':
 					        $columns[$key] = $this->list_combobox($row, $column);
-					        break;    					    
+					        break;  
+					    case 'colorpicker':
+					        $columns[$key] = $this->list_colorpicker($row, $column);
+					        break; 
+					    
+					        
     				}
 			    }
 			}
@@ -907,6 +984,12 @@ class Besc_crud
                         $col['js_callback_after_upload'] = "";
                     $columns[$i] = $this->edit_image($col);
                     break;
+                case 'ckeditor':
+                    $columns[$i] = $this->edit_ckeditor($col);
+                    break;
+                case 'colorpicker':
+                    $columns[$i] = $this->edit_colorpicker($col);
+                    break;
 			}
 			$i++;
 		}
@@ -922,6 +1005,14 @@ class Besc_crud
 		
 		return $this->ci->load->view('besc_crud/edit_view', $data, true);
 	}
+	
+	
+	/***************************************************************************************************************************************************************************************
+	 *
+	 * RENDER LIST FUNCTIONS
+	 *
+	 **************************************************************************************************************************************************************************************/
+	
 	
 	
 	protected function list_text($row, $column)
@@ -989,7 +1080,20 @@ class Besc_crud
 	    return $this->ci->load->view('besc_crud/table_elements/combobox', $dummy, true);
 	}
 	
+	protected function list_colorpicker($row, $column)
+	{
+	    $dummy = array(
+	        'value' => $row[$column['db_name']] 
+        );
+	    return $this->ci->load->view('besc_crud/table_elements/colorpicker', $dummy, true);
+	}
 	
+	
+	/***************************************************************************************************************************************************************************************
+	 * 
+	 * RENDER EDIT FUNCTIONS
+	 * 
+	 **************************************************************************************************************************************************************************************/
 	
 	protected function edit_text($col)
 	{
@@ -1075,6 +1179,16 @@ class Besc_crud
 	        $col['uploadpath'] .= '/';
 	
 	    return $this->ci->load->view('besc_crud/edit_elements/file', $col, true);
+	}
+	
+	protected function edit_ckeditor($col)
+	{
+	    return $this->ci->load->view('besc_crud/edit_elements/ckeditor', $col, true);
+	}
+	
+	protected function edit_colorpicker($col)
+	{
+	    return $this->ci->load->view('besc_crud/edit_elements/colorpicker', $col, true);
 	}
 	
 	

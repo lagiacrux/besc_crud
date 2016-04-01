@@ -10,12 +10,33 @@ $(document).ready(function()
 	
 	bc_addMNRelationListeners();
 	bc_addImageListeners();
-	bc_addMultilineListeners();
+	//bc_addMultilineListeners();
 	bc_addDatepickerListeners();
 	bc_addComboboxListeners();
 	bc_positionMNRelationSearchbox();
 	bc_addFileListeners();
+	bc_igniteCKEditor();
+	bc_igniteColorpicker();
+	
 });
+
+function bc_igniteColorpicker()
+{
+	$('.bc_col_colorpicker input').spectrum(
+	{
+		preferredFormat: "hex",
+	});
+}
+
+
+function bc_igniteCKEditor()
+{
+	$('.bc_ck_editor').each(function()
+	{
+		CKEDITOR.config.height = $(this).css('height');
+		CKEDITOR.replace($(this).attr('name'));
+	});
+}
 
 
 function bc_addComboboxListeners()
@@ -319,6 +340,12 @@ function bc_resetData()
 	{
 		$(this).find('textarea').val('');
 	});	
+	
+	// colorpicker
+	$('.bc_col_colorpicker').each(function()
+	{
+		$(this).find('input').val('#000000');
+	});	
 }
 
 
@@ -448,7 +475,33 @@ function bc_getData()
 				'type': 'combobox'		
 			}
 		);
-	});	
+	});
+	
+	// CKEDITOR
+	$('.bc_edit_table').find('.bc_col_ckeditor').each(function()
+	{
+		elements.push
+		( 
+			{
+				'name': $(this).find('textarea').attr('name').replace('col_', ''),
+				'value': CKEDITOR.instances[$(this).find('textarea').attr('name')].getData(),
+				'type': 'ckeditor'
+			}
+		);		
+	});
+	
+	// colorpicker
+	$('.bc_edit_table').find('.bc_col_colorpicker').each(function()
+	{
+		elements.push
+		( 
+			{
+				'name': $(this).find('input').attr('name').replace('col_', ''),
+				'value': $(this).find('input').val(),
+				'type': 'colorpicker'
+			}
+		);
+	});
 	
 	return elements;		
 }
@@ -568,7 +621,7 @@ function bc_addImageListeners()
 	
 	$('.bc_col_image_file').change(function()
 	{
-		bc_uploadFile($(this).attr('id'), $(this).attr('uploadpath'));
+		bc_uploadFile($(this).attr('id'), $(this).attr('uploadpath'), this.files);
 	});		
 	
 	$('.bc_col_image_delete').click(function()
@@ -595,19 +648,18 @@ function bc_uploadFile(element, u, files)
 		if(ret.success)
 		{
 			var col = $('#' + element).parent();
-			col.find('.bc_col_image_upload_btn').fadeOut(150, function()
-			{
-				col.find('.bc_col_image_preview').attr('src', rootUrl + '/' + uploadpath + ret.filename);
-				col.find('a').attr('href', rootUrl + '/' + uploadpath + '/' + ret.filename);
-				col.find('.bc_col_image_preview').fadeIn(150);
-				col.find('.bc_col_image_delete').fadeIn(150);
-				col.find('.bc_col_fname').val(ret.filename);						
-			});
 			
 			if(col.attr('callback_after_upload') !== undefined)
 			{
 				window[col.attr('callback_after_upload')](ret.filename, uploadpath, element, result);
 			}
+			
+			if(ret.crop != null)
+			{
+				bc_cropUpload(ret.filename, uploadpath, element, element_name, ret.crop);
+			}
+			else
+				bc_updateImageElement(col, uploadpath, ret.filename);
 		}
 		else
 		{
@@ -619,6 +671,19 @@ function bc_uploadFile(element, u, files)
 	xhr.send(fd);
 }
 
+function bc_updateImageElement(col, uploadpath, filename)
+{
+	
+	col.find('.bc_col_image_upload_btn').fadeOut(150, function()
+	{
+		col.find('.bc_col_image_preview').attr('src', rootUrl + '/' + uploadpath + filename);
+		col.find('a').attr('href', rootUrl + '/' + uploadpath + '/' + filename);
+		col.find('.bc_col_image_preview').fadeIn(150);
+		col.find('.bc_col_image_delete').fadeIn(150);
+		col.find('.bc_col_fname').val(filename);						
+	});
+}
+
 function bc_resetUpload(col)
 {
 	col.find('.bc_col_fname').val('');
@@ -627,11 +692,11 @@ function bc_resetUpload(col)
 	{
 		col.find('.bc_col_image_preview').attr('src', '');
 		col.find('a').attr('src', '');
-		col.find('.bc_col_file_upload_btn').fadeIn(150);
+		col.find('.bc_col_image_upload_btn').fadeIn(150);
 	});
 }
 
-function bc_addMultilineListeners()
+/*function bc_addMultilineListeners()
 {
 	$('.bc_col_multiline_formatting_button').click(function()
 	{
@@ -661,6 +726,95 @@ function addTags(multiline, tag)
 	}
 
 	ta.val(newtext);
+}*/
+
+function bc_cropUpload(filename, uploadpath, element, elementname, cropoptions)
+{
+	var html = '<div id="bc_upload_crop"><img id="bc_upload_crop_img" src="' + rootUrl + uploadpath + filename + '" /><div id="bc_upload_crop_btn">CROP</div></div><div id="bc_upload_crop_fade"></div>';
+	$('body').append(html);
+	
+	var wWidth = $(document).width();
+	var wHeight = $(document).height();
+	var padding = 60;
+	
+	imagesLoaded($('#bc_upload_crop'), function()
+	{
+		var iWidth = $('#bc_upload_crop_img').get(0).naturalWidth;
+		var iHeight = $('#bc_upload_crop_img').get(0).naturalHeight;
+		var ratio = iWidth / iHeight;
+		var cWidth = iWidth + padding;
+		var cHeight = iHeight + padding + $('bc_#upload_crop_btn').height();
+		
+		if(cWidth > wWidth * 0.8)
+		{
+			iWidth = wWidth * 0.8 - padding;
+			iHeight = iWidth / ratio;
+			cWidth = iWidth + padding;
+			cHeight = iHeight + padding;
+		}
+		
+		if(cHeight > wHeight * 0.8)
+		{
+			iHeight = wHeight * 0.8 - padding - $('#bc_upload_crop_btn').height();
+			iWidth = iHeight * ratio;
+			cWidth = iWidth + padding;
+			cHeight = iHeight + padding;			
+		}
+		
+		$('#bc_upload_crop').css({'left': (wWidth - cWidth)/2, 'top': (wHeight - cHeight)/2});
+		$('#bc_upload_crop_img').css({'width': iWidth, 'height': iHeight});
+		
+		
+		areaselect = $('#bc_upload_crop_img').imgAreaSelect(
+		{ 
+			aspectRatio: cropoptions.ratio, 
+			handles: true,
+			x1: 0,
+			y1: 0,
+			x2: parseInt(cropoptions.minWidth),
+			y2: parseInt(cropoptions.minHeight),
+			minWidth: parseInt(cropoptions.minWidth),
+			minHeight: parseInt(cropoptions.minHeight),
+			parent: '#bc_upload_crop',
+			instance: true,
+		});
+
+	});		
+
+	$('#bc_upload_crop_btn').on('click', function()
+	{
+		$.ajax(
+		{
+			url: bc_crop_url,
+			data: { filename: filename, x1: areaselect.getSelection().x1, y1: areaselect.getSelection().y1, x2: areaselect.getSelection().x2, y2: areaselect.getSelection().y2, 'col': elementname},
+			method: 'POST',
+			cache: false,
+			dataType: 'json',
+			success: function(data)
+			{
+				var ret = data;
+				
+				if(ret.success)
+				{
+					$('#bc_upload_crop_fade').remove();
+					$('#bc_upload_crop').remove();
+					
+					bc_updateImageElement($('#' + element).parent(), uploadpath, filename);
+				}
+				else
+				{
+					alert('Error while cropping');
+				}
+			}
+		});
+	});
+	
+	$('#bc_upload_crop_fade').on('click', function()
+	{
+		$('#bc_upload_crop_fade').remove();
+		$('#bc_upload_crop').remove();
+		bc_updateImageElement($('#' + element).parent(), uploadpath, filename);
+	});
 }
 
 
