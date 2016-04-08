@@ -577,10 +577,13 @@ class Besc_crud
 	{
 	    $filename = $this->ci->input->post('filename');
 	    $col = $this->ci->input->post('col');
-	    $x1 = $this->ci->input->post('x1');
-	    $y1 = $this->ci->input->post('y1');
-	    $x2 = $this->ci->input->post('x2');
-	    $y2 = $this->ci->input->post('y2');
+	    $ratio = $this->ci->input->post('ratio');
+	    
+	    $x1 = intval($this->ci->input->post('x1') * $ratio);
+        $y1 = intval($this->ci->input->post('y1') * $ratio);
+        $x2 = intval($this->ci->input->post('x2') * $ratio);
+        $y2 = intval($this->ci->input->post('y2') * $ratio);
+	    
 	    
 	    $uploadpath = $this->db_columns[$col]['uploadpath'];
 	    $cropdata = $this->db_columns[$col]['crop'];
@@ -1139,6 +1142,8 @@ class Besc_crud
 		
 		$col['avail'] = $this->ci->bc_model->get_m_n_relation_n_values($col['table_n'], $col['table_n_pk'], $selected, $col['table_n_value']);
 
+		$col['filter'] = isset($col['filter']) ? $col['filter'] : false;
+		
 		return $this->ci->load->view('besc_crud/edit_elements/m_n_relation', $col, true);
 	}	
 	

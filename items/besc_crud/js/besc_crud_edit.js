@@ -764,6 +764,7 @@ function bc_cropUpload(filename, uploadpath, element, elementname, cropoptions)
 		$('#bc_upload_crop').css({'left': (wWidth - cWidth)/2, 'top': (wHeight - cHeight)/2});
 		$('#bc_upload_crop_img').css({'width': iWidth, 'height': iHeight});
 		
+		var select_ratio = $('#bc_upload_crop_img').get(0).naturalWidth / parseInt($('#bc_upload_crop_img').css('width'));
 		
 		areaselect = $('#bc_upload_crop_img').imgAreaSelect(
 		{ 
@@ -771,10 +772,10 @@ function bc_cropUpload(filename, uploadpath, element, elementname, cropoptions)
 			handles: true,
 			x1: 0,
 			y1: 0,
-			x2: parseInt(cropoptions.minWidth),
-			y2: parseInt(cropoptions.minHeight),
-			minWidth: parseInt(cropoptions.minWidth),
-			minHeight: parseInt(cropoptions.minHeight),
+			x2: parseInt(cropoptions.minWidth) / select_ratio,
+			y2: parseInt(cropoptions.minHeight) / select_ratio,
+			minWidth: parseInt(cropoptions.minWidth) / select_ratio,
+			minHeight: parseInt(cropoptions.minHeight) / select_ratio,
 			parent: '#bc_upload_crop',
 			instance: true,
 		});
@@ -786,7 +787,15 @@ function bc_cropUpload(filename, uploadpath, element, elementname, cropoptions)
 		$.ajax(
 		{
 			url: bc_crop_url,
-			data: { filename: filename, x1: areaselect.getSelection().x1, y1: areaselect.getSelection().y1, x2: areaselect.getSelection().x2, y2: areaselect.getSelection().y2, 'col': elementname},
+			data: { 
+				filename: filename, 
+				x1: areaselect.getSelection().x1, 
+				y1: areaselect.getSelection().y1, 
+				x2: areaselect.getSelection().x2, 
+				y2: areaselect.getSelection().y2, 
+				'col': elementname,
+				'ratio': $('#bc_upload_crop_img').get(0).naturalWidth / parseInt($('#bc_upload_crop_img').css('width')),
+			},
 			method: 'POST',
 			cache: false,
 			dataType: 'json',
