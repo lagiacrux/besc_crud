@@ -809,22 +809,20 @@ class Besc_crud
     	            case 'm_n_relation':
     	                if($filter['value'] != '')
     	                {
-                            $col = $this->db_columns[$filter['name']];
+    	                    $col = $this->db_columns[$filter['name']];
                             
                             $elements = array(); 
                             foreach($this->ci->bc_model->get_m_n_relation_filter_ids($col['table_mn'], $col['table_mn_col_m'], $col['table_mn_col_n'], $this->db_primary_key, $col['table_n'], $col['table_n_value'], $col['table_n_pk'], $filter['value'])->result_array() as $row)
                             {
                                 $elements[] = $row[$col['table_mn_col_m']];
                             }
-                            $m_n[$this->db_primary_key] = $elements;
+                            $m_n[$this->db_primary_key] = $elements == array() ? array(null) : $elements;
     	                }
     	                break;
     	        }
     	    }
 	    }
 	    
-	    //var_dump($m_n);
-
 	    return array(
 	        'select' => $select,
 	        'text' => $text,
@@ -839,8 +837,7 @@ class Besc_crud
 	
 	protected function getData()
 	{
-	    //var_dump($this->filters);
-		return array(
+	    return array(
 	        'data' => $this->ci->bc_model->get($this->db_table, $this->db_where, $this->paging_perpage, $this->paging_offset, $this->filters, $this->db_order_by_field, $this->db_order_by_direction),
 	        'total' => $getTotal = $this->ci->bc_model->get_total($this->db_table, $this->db_where, $this->filters)->num_rows(), 
 	    );
@@ -871,17 +868,18 @@ class Besc_crud
 	                $html .= $this->ci->load->view('besc_crud/filters/select', $data, true);
 	                break;
 	            case 'm_n_relation':
-	                $data['filter_value'] = isset($this->filters['text'][$filter]) ? $this->filters['text'][$filter] : '';
+	                $data['filter_value'] = isset($this->filters['m_n_relation'][$filter]) ? $this->filters['m_n_relation'][$filter] : '';
 	                $data['display_as'] = $this->db_columns[$filter]['display_as'];
 	                $data['db_name'] = $filter;
 	                $data['type'] = $this->db_columns[$filter]['type'];
 	                $html .= $this->ci->load->view('besc_crud/filters/text', $data, true);
 	                break;
                 case 'text':
+                case 'multiline':
 	                $data['filter_value'] = isset($this->filters['text'][$filter]) ? $this->filters['text'][$filter] : '';
 	                $data['display_as'] = $this->db_columns[$filter]['display_as'];
 	                $data['db_name'] = $this->db_columns[$filter]['db_name'];
-	                $data['type'] = $this->db_columns[$filter]['type'];
+	                $data['type'] = 'text';
 	                $html .= $this->ci->load->view('besc_crud/filters/text', $data, true);
 	                break;    
 	            
