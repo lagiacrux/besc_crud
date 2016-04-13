@@ -18,14 +18,22 @@
             <?= $paging_and_filtering?>
 					<?php endif;?>
 		
-		<table class="bc_table">			<thead>				<th style="width: <?= (count($custom_button) + 2) * 20?>px;"></th>				<?php foreach($headers as $header): ?>					<th><?= $header?></th>				<?php endforeach; ?>			</thead>			<tbody>				<?php $i = 0; foreach($rows as $row): ?>				<tr <?php if($i %2 == 1):?> class="bc_erow" <?php endif;?>>					<td class="bc_row_actions_container" style="width: <?= (count($custom_button) + 2) * 20?>px;">						
-						<?php if($allow_delete):?>
-						<img class="bc_row_action delete" src="<?= site_url('items/besc_crud/img/delete.png')?>" row_id="<?= $row['pk']?>" />
-						<?php endif;?>
+		<table class="bc_table">			<thead>				<th style="width: <?= (count($custom_button) + ($allow_delete ? 1 : 0) + ($allow_edit ? 1 : 0)) * 20?>px;"></th>				<?php foreach($headers as $header): ?>					<th><?= $header?></th>				<?php endforeach; ?>			</thead>			<tbody>				<?php $i = 0; foreach($rows as $row): ?>				<tr <?php if($i %2 == 1):?> class="bc_erow" <?php endif;?>>					<td class="bc_row_actions_container" style="width: <?= (count($custom_button) + ($allow_delete ? 1 : 0) + ($allow_edit ? 1 : 0)) * 20?>px;">						
+						    <?php if($allow_delete):?>
+                            <div class="bc_row_action_container">
+                                <img class="bc_row_action delete" src="<?= site_url('items/besc_crud/img/delete.png')?>" row_id="<?= $row['pk']?>" />
+                            </div>
+						    <?php endif;?>
+                            
 						
-						<?php if($allow_edit):?> 
-                        <a href="<?= $bc_urls['bc_edit_url'] . $row['pk']?>">                            <img class="bc_row_action edit"	src="<?= site_url('items/besc_crud/img/edit.png')?>" />						</a>
-						<?php endif;?>						<?php foreach($custom_button as $button): ?>							<a href="<?php echo $button['url']; if($button['add_pk']) echo '/' . $row['pk'];?>">								<img class="bc_row_action" src="<?= $button['icon']?>" title="<?= $button['name']?>" />							</a>						<?php endforeach;?>					</td>
+    						<?php if($allow_edit):?> 
+    						<div class="bc_row_action_container">
+                                <a href="<?= $bc_urls['bc_edit_url'] . $row['pk']?>">                                    <img class="bc_row_action edit"	src="<?= site_url('items/besc_crud/img/edit.png')?>" />        						</a>
+    						</div>
+    						<?php endif;?>    						<?php foreach($custom_button as $button): ?>
+                            <div class="bc_row_action_container">    							<a href="<?php echo $button['url']; if($button['add_pk']) echo '/' . $row['pk'];?>">    								<img class="bc_row_action" src="<?= $button['icon']?>" title="<?= $button['name']?>" />    							</a>
+							</div>    						<?php endforeach;?>
+											</td>
 					<?php foreach($row as $key => $value): ?>						<?php if($key != 'pk'): ?>							<?= $value?>						<?php endif;?>					<?php endforeach; ?>				</tr>
 				<?php $i++; endforeach; ?>			</tbody>		</table>		<?php if(!$ajax):?>			<div class="bc_fade"></div>						<div class="bc_delete_dialog">				Are you sure you want to delete this record?				<div class="bc_delete_button bc_delete_ok">OK</div>				<div class="bc_delete_button bc_delete_cancel">Cancel</div>			</div>		<?php endif;?>
 

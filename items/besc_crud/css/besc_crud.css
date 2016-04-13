@@ -27,7 +27,24 @@
 	{
 		text-decoration: none;
 	}	
-			.bc_row_action	{		max-height: 20px;		cursor: pointer;		vertical-align: sub;	}.bc_delete_dialog{	position: fixed;	z-index: 20000;	overflow: hidden;	top: 35%;	border: solid 2px #ddd;	border-radius: 15px;	background-color: #f7f7f7;		width: 500px;	margin-left: -250px;	left: 50%;	height: 80px;		font-size: 20px;	font-family: 'open_sansregular';	text-align: center;	padding: 20px 0px;	display: none;}	.bc_delete_button	{		position: absolute;		width: 180px;		top: 65px;		line-height: 35px;		background-color: #ffffff;		font-size: 16px;		text-align: center;		border-radius: 10px;		cursor: pointer;	}			.bc_delete_button:hover		{			border: solid 1px #ddd;		}	.bc_delete_ok	{		left: 50px;	}		.bc_delete_cancel	{		left: 270px;	}.bc_fade{	position: fixed;	width: 100%;	height: 100%;	top: 0px;	left: 0px;	z-index: 19999;	display: none;	background-color: rgba(247,247,247,0.4);}
+	
+	.bc_row_action_container
+	{
+		position: relative;
+		float: left;
+		width: 20px;
+		height: 20px;
+	}
+				.bc_row_action		{
+			position: relative;
+			height: 16px;
+			width: 16px;
+			margin: 2px;
+			cursor: pointer;
+		}
+		
+
+		.bc_delete_dialog{	position: fixed;	z-index: 20000;	overflow: hidden;	top: 35%;	border: solid 2px #ddd;	border-radius: 15px;	background-color: #f7f7f7;		width: 500px;	margin-left: -250px;	left: 50%;	height: 80px;		font-size: 20px;	font-family: 'open_sansregular';	text-align: center;	padding: 20px 0px;	display: none;}	.bc_delete_button	{		position: absolute;		width: 180px;		top: 65px;		line-height: 35px;		background-color: #ffffff;		font-size: 16px;		text-align: center;		border-radius: 10px;		cursor: pointer;	}			.bc_delete_button:hover		{			border: solid 1px #ddd;		}	.bc_delete_ok	{		left: 50px;	}		.bc_delete_cancel	{		left: 270px;	}.bc_fade{	position: fixed;	width: 100%;	height: 100%;	top: 0px;	left: 0px;	z-index: 19999;	display: none;	background-color: rgba(247,247,247,0.4);}
 .bc_edit_table{	position: relative;	border: solid 1px #ddd;	border-radius: 15px;	overflow: hidden;	font-family: 'open_sansregular';}	.bc_edit_table .erow	{		background-color: #f7f7f7;	}	.bc_column	{		border-bottom: solid 1px #ddd;		padding: 15px;	}
 	
 	.bc_column_header	{		margin-top: 0px;		font-size: 14px;		font-weight: bold;		margin-bottom: 5px;	}		.bc_column_info	{		margin-top: -2px;		margin-bottom: 5px;		font-size: 12px;
