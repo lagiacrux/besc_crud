@@ -22,9 +22,13 @@ $(document).ready(function()
 
 function bc_igniteColorpicker()
 {
-	$('.bc_col_colorpicker input').spectrum(
+	$('.bc_col_colorpicker input').each(function()
 	{
-		preferredFormat: "hex",
+		$(this).spectrum(
+		{
+			preferredFormat: "hex",
+			showInput: $(this).attr('hexinput') == "1",
+		});
 	});
 }
 

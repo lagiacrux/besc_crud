@@ -1191,6 +1191,7 @@ class Besc_crud
 	
 	protected function edit_colorpicker($col)
 	{
+	    $col['hexinput'] = isset($col['hexinput']) && $col['hexinput']; 
 	    return $this->ci->load->view('besc_crud/edit_elements/colorpicker', $col, true);
 	}
 	
