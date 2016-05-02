@@ -47,6 +47,11 @@ function bc_bindListListeners(toggle)
 			bc_toggle_fade(true);
 			$('.bc_delete_dialog').fadeIn(bc_delete_dialog_phasing);
 		});		
+		
+		$('.bc_sortable').on('click', function()
+		{
+			bc_sorting($(this));//$(this).toggleClass('bc_table_sort_asc');
+		});
 	}
 	else
 	{
@@ -54,7 +59,6 @@ function bc_bindListListeners(toggle)
 		$('.bc_delete_cancel').unbind('click');
 		$('.bc_row_action.delete').unbind('click');
 	}
-
 }
 
 function bc_toggle_fade(toggle)
@@ -65,16 +69,39 @@ function bc_toggle_fade(toggle)
 		$('.bc_fade').fadeOut(bc_delete_dialog_phasing);
 }
 
-function bc_refresh(page, filter)
+
+function bc_sorting(th)
+{
+	if(th.hasClass('bc_table_sort_asc'))
+	{
+		th.removeClass('bc_table_sort_asc').addClass('bc_table_sort_desc');
+	}
+	else if(th.hasClass('bc_table_sort_desc'))
+	{
+		th.removeClass('bc_table_sort_desc').addClass('bc_table_sort_asc');
+	}
+	else
+	{
+		$('.bc_sortable').removeClass('bc_table_sort_asc').removeClass('bc_table_sort_desc');
+		th.addClass('bc_table_sort_asc');
+	}
+	
+	bc_refresh(0);
+}
+
+function bc_refresh(page)
 {
 	if(page === undefined)
 		page = bc_paging_active;
 	
-	
 	$.ajax(
 	{
         url: bc_refresh_url,
-        data: {page: page, filter: getFilterSettings()},
+        data: {
+        	'page': page, 
+        	'filter': getFilterSettings(),
+        	'sorting': getSorting(),
+    	},
         type: "GET",
         dataType: "json",
         beforeSend: function()
@@ -184,6 +211,7 @@ function getFilterSettings()
 		switch($(this).attr('type'))
 		{
 			case 'select':
+			case 'combobox':
 				bc_filter.push
 				(
 					{
@@ -210,4 +238,16 @@ function getFilterSettings()
 	});
 	
 	return bc_filter;
+}
+
+function getSorting()
+{
+	var col = $('.bc_table_sort_asc').length == 1 ? $('.bc_table_sort_asc') : $('.bc_table_sort_desc');
+	
+	if(col.length != 0)
+		var ret = {'col_id': col.attr('col'), 'direction': col.hasClass('bc_table_sort_asc') ? 0 : 1};
+	else
+		var ret = {};
+	
+	return ret;
 }

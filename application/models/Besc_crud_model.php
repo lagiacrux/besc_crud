@@ -17,11 +17,13 @@ class Besc_crud_model extends CI_Model
 	    
 	    if($filters['m_n_relation'] != array())
 	    {
-	        foreach($filters['m_n_relation'] as $key => $value)
+	        foreach($filters['m_n_relation'] as $f)
 	        {
-	            $this->db->where_in($key, $value);
+	            $this->db->where_in($f['id'], $f['values']);
 	        }
 	    }
+
+	    // DONT FORGET THE OTHER FUNCTION
 	    
 	    if($order_by_col != '' && $order_by_direction != '')
 	        $this->db->order_by($order_by_col, $order_by_direction);
@@ -52,9 +54,9 @@ class Besc_crud_model extends CI_Model
 	    
 	    if($filters['m_n_relation'] != array())
 	    {
-	        foreach($filters['m_n_relation'] as $key => $value)
+	        foreach($filters['m_n_relation'] as $f)
 	        {
-	            $this->db->where_in($key, $value);
+	            $this->db->where_in($f['id'], $f['values']);
 	        }
 	    }
 	    	    

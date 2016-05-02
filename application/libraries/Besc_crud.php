@@ -23,11 +23,14 @@ class Besc_crud
 	);
 	protected $ordering = array();
 	
+	protected $sortableTypes = array('text', 'select', 'combobox');
+	
 	protected $states = array('list', 'add', 'insert', 'edit', 'update', 'delete', 'refresh_list', 'imageupload', 'validation', 'filter', 'ordering', 'save_ordering', 'imagecrop');
 	protected $state_info = array();
 	protected $base_url = "";
 	
 	protected $title = "";
+	protected $hashname = "";
 	
 	protected $custom_actions = array();
 	protected $custom_buttons = array();
@@ -40,6 +43,7 @@ class Besc_crud
 	protected $paging_offset = 0;
 	
 	protected $custom_upload = null;
+	
 	
 	
 	function __construct()
@@ -240,6 +244,7 @@ class Besc_crud
 	
 	protected function prepare()
 	{
+	    $this->hashname = hash_hmac("md5", $this->db_table . $this->title, $this->ci->session->session_id);
 		$this->state_info = $this->get_state_info_from_url();
 		$this->base_url = $this->get_base_url();
 	}
@@ -251,6 +256,8 @@ class Besc_crud
 		switch($this->state_info->operation)
 		{
 			case 'list':
+			    $this->getSortingFromSession();
+			    $this->getFiltersFromSession();
 				return $this->render_list();
 				break;
 
@@ -261,7 +268,8 @@ class Besc_crud
 				
 			case 'refresh_list':
 			    $this->paging_offset = $this->ci->input->get('page') * $this->paging_perpage;
-			    $this->filters = $this->getFiltersFromAjax($this->ci->input->get('filter'));
+			    $this->getFiltersFromAjax($this->ci->input->get('filter'));
+			    $this->getSortingFromAjax($this->ci->input->get('sorting'));
 				$this->render_list(true);
 				break;
 				
@@ -690,7 +698,11 @@ class Besc_crud
 		        $show_in_list = false;
 		    
 		    if($show_in_list)
-		        $data['headers'][] = isset($column['display_as']) ? $column['display_as'] : $key;
+		        $data['headers'][] = array(
+		            'display_as' => isset($column['display_as']) ? $column['display_as'] : $key,
+		            'sortable' => in_array($column['type'], $this->sortableTypes),
+		            'id' => $key,
+		        );
 		}
 		
 		$get = $this->getData();
@@ -762,6 +774,8 @@ class Besc_crud
 		$data['custom_action'] = $this->custom_actions;
 		$data['bc_urls'] =  $this->get_urls();
 		$data['paging_and_filtering'] = $this->paging_and_filtering($get);
+		$data['sorting_col'] = $this->db_order_by_field;
+		$data['sorting_direction_class'] = $this->db_order_by_direction == 'asc' ? 'bc_table_sort_asc' : 'bc_table_sort_desc';
 		$data['ordering'] = $this->ordering; 
 		
 		$data['ajax'] = $ajax;
@@ -781,7 +795,6 @@ class Besc_crud
 	
 	protected function getFiltersFromAjax($ajaxfilter)
 	{
-	    
 	    $select = array();
 	    $text = array();
 	    $m_n = array();
@@ -816,23 +829,78 @@ class Besc_crud
                             {
                                 $elements[] = $row[$col['table_mn_col_m']];
                             }
-                            $m_n[$this->db_primary_key] = $elements == array() ? array(null) : $elements;
+                            $m_n[$filter['name']] = array(
+                                'id' => $this->db_primary_key,
+                                'values' => $elements == array() ? array(null) : $elements,
+                                'val' => $filter['value'],
+                            );
     	                }
     	                break;
     	        }
     	    }
 	    }
 	    
-	    return array(
+	    $this->filters = array(
 	        'select' => $select,
 	        'text' => $text,
 	        'm_n_relation' => $m_n,
 	    );
+	    
+	    if($select != array() || $text != array() || $m_n != array())
+	        $this->ci->session->set_userdata($this->hashname . '_filter', $this->filters);
+	    else
+	        $this->ci->session->unset_userdata($this->hashname . '_filter');
 	}
 	
-	protected function getFiltersFromCookie()
+	protected function getSortingFromAjax($ajaxSorting)
 	{
+	    if($ajaxSorting != null)
+        {
+            $direction = '';
+            if(intval($ajaxSorting['direction']) == 0)
+                $direction = 'asc';
+            
+            if(intval($ajaxSorting['direction']) == 1)
+                $direction = 'desc';
+            
+            if($this->columnExists($ajaxSorting['col_id']) && $direction != '')
+            {
+                $this->db_order_by_direction = $direction;
+                $this->db_order_by_field = $ajaxSorting['col_id'];
+                
+                $this->ci->session->set_userdata($this->hashname . '_sortcol', $this->db_order_by_field);
+                $this->ci->session->set_userdata($this->hashname . '_sortdir', $this->db_order_by_direction);
+            }
+            else
+            {
+                $this->ci->session->unset_userdata($this->hashname . '_sortcol');
+                $this->ci->session->unset_userdata($this->hashname . '_sortdir');
+            }
+        } 
+        else
+        {
+            $this->ci->session->unset_userdata($this->hashname . '_sortcol');
+            $this->ci->session->unset_userdata($this->hashname . '_sortdir');
+        }
+	}
+	
+	protected function getSortingFromSession()
+	{
+	    $sortfield = $this->ci->session->userdata($this->hashname . '_sortcol');
+	    $sortdir = $this->ci->session->userdata($this->hashname . '_sortdir');
 	    
+	    if(($sortdir == 'asc' || $sortdir == 'desc') && $this->columnExists($sortfield))
+	    {
+	        $this->db_order_by_direction = $sortdir;
+	        $this->db_order_by_field = $sortfield;
+	    }
+	}
+	
+	protected function getFiltersFromSession()
+	{
+	    $filters = $this->ci->session->userdata($this->hashname . '_filter'); 
+	    if($filters != NULL)
+	        $this->filters = $filters;
 	}
 	
 	protected function getData()
@@ -841,6 +909,18 @@ class Besc_crud
 	        'data' => $this->ci->bc_model->get($this->db_table, $this->db_where, $this->paging_perpage, $this->paging_offset, $this->filters, $this->db_order_by_field, $this->db_order_by_direction),
 	        'total' => $getTotal = $this->ci->bc_model->get_total($this->db_table, $this->db_where, $this->filters)->num_rows(), 
 	    );
+	}
+	
+	protected function columnExists($col)
+	{
+	    $exists = false;
+	    foreach($this->db_columns as $key => $column)
+	    {
+	        if($col == $key)
+	            $exists = true;
+	    }
+	    
+	    return $exists;
 	}
 	
 	protected function paging_and_filtering($get)
@@ -860,6 +940,7 @@ class Besc_crud
 	        switch($this->db_columns[$filter]['type'])
 	        {
 	            case 'select':
+	            case 'combobox':
 	                $data['filter_value'] = isset($this->filters['select'][$filter]) ? $this->filters['select'][$filter] : '';
 	                $data['options'] = $this->db_columns[$filter]['options'];
 	                $data['db_name'] = $this->db_columns[$filter]['db_name'];
@@ -868,7 +949,7 @@ class Besc_crud
 	                $html .= $this->ci->load->view('besc_crud/filters/select', $data, true);
 	                break;
 	            case 'm_n_relation':
-	                $data['filter_value'] = isset($this->filters['m_n_relation'][$filter]) ? $this->filters['m_n_relation'][$filter] : '';
+	                $data['filter_value'] = isset($this->filters['m_n_relation'][$filter]['val']) ? $this->filters['m_n_relation'][$filter]['val'] : '';
 	                $data['display_as'] = $this->db_columns[$filter]['display_as'];
 	                $data['db_name'] = $filter;
 	                $data['type'] = $this->db_columns[$filter]['type'];
@@ -876,13 +957,12 @@ class Besc_crud
 	                break;
                 case 'text':
                 case 'multiline':
-	                $data['filter_value'] = isset($this->filters['text'][$filter]) ? $this->filters['text'][$filter] : '';
+                    $data['filter_value'] = isset($this->filters['text'][$filter]) ? $this->filters['text'][$filter] : '';
 	                $data['display_as'] = $this->db_columns[$filter]['display_as'];
 	                $data['db_name'] = $this->db_columns[$filter]['db_name'];
 	                $data['type'] = 'text';
 	                $html .= $this->ci->load->view('besc_crud/filters/text', $data, true);
 	                break;    
-	            
 	        }
 	    }
 	    

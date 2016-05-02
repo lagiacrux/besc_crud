@@ -10,7 +10,19 @@
 		font-weight: bold;
 		border-radius: 15px;	}			.bc_message_error		{			background-color: #d85b5b;		}				.bc_message_success		{			background-color: #a5e591;		}.bc_table_actions{	position: relative;	background-color: #ddd;	margin-top: 5px;	margin-bottom: 5px;	line-height: 25px;
 	width: 100%;}	.bc_table_actions a	{		text-decoration: none;		color: inherit;	}	.bc_table_action	{		position: relative;		cursor: pointer;		margin-left: 10px;		margin-right: 10px;		font-family: 'open_sansregular';		font-size: 13px;	}		.bc_table_action_icon		{			position: relative;			vertical-align: sub;			max-width: 16px;			max-height: 16px;		}.bc_table{	position: relative;	margin-top: 5px;	margin-bottom: 5px;	border-collapse: separate;	border-width: 0px;	font-size: 12px;	border-bottom: solid 1px #ddd;	border-right: solid 1px #ddd;
-	width: 100%;}	.bc_erow	{		background-color: #f7f7f7;		border-bottom: solid 1px #f7f7f7;	}	.bc_table th	{		background-image: url('../img/thbg.gif');		background-repeat: repeat-x;		background-position: bottom;		background-color: #fafafa;		line-height: 25px;		vertical-align: bottom;		font-size: 13px;		padding-left: 4px;		text-align: left;		font-family: 'open_sansregular';	}		.bc_table td	{		border-left: solid 1px #ddd;		border-right: solid 1px #fff;		padding: 4px;		font-family: 'open_sansregular';		font-size: 12px;
+	width: 100%;}	.bc_erow	{		background-color: #f7f7f7;		border-bottom: solid 1px #f7f7f7;	}	.bc_table th	{		background: url('../img/thbg.gif') repeat-x bottom #fafafa;		line-height: 25px;		vertical-align: bottom;		font-size: 13px;		padding-left: 4px;		text-align: left;		font-family: 'open_sansregular';	}
+	
+		.bc_table_sort_desc
+		{
+			background: url('../img/arrow_down.png') no-repeat right center,
+					    url('../img/thbg.gif') repeat-x bottom #fafafa !important; 
+		}
+		
+		.bc_table_sort_asc
+		{
+			background: url('../img/arrow_up.png') no-repeat right center,
+					    url('../img/thbg.gif') repeat-x bottom #fafafa !important; 
+		}		.bc_table td	{		border-left: solid 1px #ddd;		border-right: solid 1px #fff;		padding: 4px;		font-family: 'open_sansregular';		font-size: 12px;
 		vertical-align: middle;	}
 	
 		.bc_m_n_element
