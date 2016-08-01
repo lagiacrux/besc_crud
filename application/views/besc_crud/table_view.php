@@ -12,7 +12,7 @@
 						</a>
 					</span>
 				<?php endif;?>
-								<?php foreach($custom_action as $action): ?>					<span class="bc_table_action"> 						<a href="<? echo $action['url']; if($action['add_pk']) echo '/' . $row['pk'];?>">							<img class="bc_table_action_icon" src="<?= $action['icon']?>" title="<?= $action['name']?>" /> <?= $action['name']?>						</a>					</span>
+								<?php foreach($custom_action as $action): ?>					<span class="bc_table_action"> 						<a href="<?php echo $action['url']; if($action['add_pk']) echo '/' . $row['pk'];?>">							<img class="bc_table_action_icon" src="<?= $action['icon']?>" title="<?= $action['name']?>" /> <?= $action['name']?>						</a>					</span>
 				<?php endforeach;?>			</div>
 
             <?= $paging_and_filtering?>
