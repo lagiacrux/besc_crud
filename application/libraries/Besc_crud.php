@@ -1282,7 +1282,9 @@ class Besc_crud
 	    $data['bc_urls'] = $this->get_urls();
 	    $data['items'] = array();
 	    
+	    
 	    $value_col = $this->db_columns[$this->ordering['value']];
+	    $data['type'] = $value_col['type'];
 	    
 	    foreach($this->ci->bc_model->get_ordering($this->db_table, $this->db_where, $this->ordering['ordering'])->result_array() as $column)
 	    {
@@ -1304,6 +1306,9 @@ class Besc_crud
                 case 'date':
                 case 'multiline':
                     $val = $column[$this->ordering['value']];
+                    break;
+                case 'image':
+                    $val = site_url($value_col['uploadpath'] . '/' . $column[$this->ordering['value']]);
                     break;
                 default:
                     $val = null;

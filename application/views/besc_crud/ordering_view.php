@@ -25,7 +25,14 @@
 		<?php if(count($items) > 0):?>
             <ul class="bc_ordering_container">
                 <?php foreach($items as $item):?>
-                    <li class="bc_ordering_item" item_id="<?= $item['id']?>"><?= $item['value']?></li>
+                    <li class="bc_ordering_item" item_id="<?= $item['id']?>">
+                        <?php 
+                        if($type != 'image')
+                            echo $item['value'];
+                        else
+                            echo "<img src='" . $item['value'] . "' />";
+                        ?>
+                    </li>
                 <?php endforeach;?>
             </ul>
         <?php else:?>

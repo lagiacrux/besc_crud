@@ -409,6 +409,12 @@
 		cursor: pointer;
 	}
 	
+		.bc_ordering_item img
+		{
+			max-width: 300px;
+			max-height: 100px;
+		}	
+	
 	.bc_ordering_item:last-child
 	{
 		margin-bottom: 0px;
